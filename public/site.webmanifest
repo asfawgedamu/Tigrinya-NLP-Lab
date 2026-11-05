@@ -1,0 +1,9 @@
+{
+  "name": "Tigrinya NLP Dialect Identification Lab",
+  "short_name": "Tigrinya NLP Lab",
+  "description": "Research workspace for Tigrinya dialect identification and corpus exploration.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0F1D1F",
+  "theme_color": "#0F1D1F"
+}
