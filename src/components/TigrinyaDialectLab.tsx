@@ -316,8 +316,8 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
   React.useEffect(() => {
     if (initialText) {
       setInputText(initialText);
-      const res = runMockInference(initialText, `inf-${Date.now()}`);
-      setSingleResult(res);
+      setHasClassifiedResult(false);
+      setIsResultsExpanded(true);
       setActiveTabMode('single');
     }
   }, [initialText]);
@@ -328,10 +328,13 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
   const [activeTabMode, setActiveTabMode] = useState<'single' | 'batch' | 'admin-moderation'>('single');
   const [modelCategory, setModelCategory] = useState<'classic' | 'deep'>('deep');
   const [modelChoice, setModelChoice] = useState<string>('char-cnn');
+  // Keep inference diagnostics hidden until the user explicitly classifies text.
+  const [hasClassifiedResult, setHasClassifiedResult] = useState<boolean>(false);
+  const [isResultsExpanded, setIsResultsExpanded] = useState<boolean>(true);
 
   // Re-run inference immediately when modelChoice changes
   React.useEffect(() => {
-    if (inputText.trim()) {
+    if (hasClassifiedResult && inputText.trim()) {
       const res = runMockInference(inputText, `inf-${Date.now()}`, modelChoice);
       setSingleResult(res);
     }
@@ -485,6 +488,8 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
     setTimeout(() => {
       const result = runMockInference(inputText, `inf-${Date.now()}`, modelChoice);
       setSingleResult(result);
+      setHasClassifiedResult(true);
+      setIsResultsExpanded(true);
       setIsRunning(false);
     }, 280);
   };
@@ -827,10 +832,10 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
 
       {/* SINGLE TEXT INFERENCE MODE */}
       {activeTabMode === 'single' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="space-y-6">
           
-          {/* Left Column: Input Box & Sample Presets (7 cols) */}
-          <div className="lg:col-span-7 space-y-4">
+          {/* Full-width input and research controls */}
+          <div className="space-y-4">
             
             {/* Quick Presets */}
             <div className={`p-4 rounded-[6px] border ${
@@ -852,8 +857,8 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                     key={idx}
                     onClick={() => {
                       setInputText(sample.text);
-                      const res = runMockInference(sample.text, `quick-${idx}`);
-                      setSingleResult(res);
+                      setHasClassifiedResult(false);
+                      setIsResultsExpanded(true);
                     }}
                     className={`p-2.5 text-left rounded-[4px] text-xs transition border cursor-pointer ${
                       inputText === sample.text
@@ -1036,7 +1041,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
               {/* Text Area with Pure White background in light mode */}
               <textarea
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
+                onChange={(e) => { setInputText(e.target.value); setHasClassifiedResult(false); }}
                 rows={5}
                 className={`w-full p-4 rounded-[4px] border font-serif text-base leading-relaxed focus:outline-none transition-colors ${
                   isDark
@@ -1070,7 +1075,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                   </button>
 
                   <button
-                    onClick={() => setInputText('')}
+                    onClick={() => { setInputText(''); setHasClassifiedResult(false); setIsResultsExpanded(true); }}
                     title="Clear text"
                     className={`p-2.5 rounded-[4px] border transition-colors cursor-pointer ${
                       isDark 
@@ -1146,25 +1151,33 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
 
           </div>
 
-          {/* Right Column: Real-Time Results Diagnostics (5 cols) */}
-          <div className="lg:col-span-5 space-y-4">
-            
-            {/* Top Prediction Card */}
-            <div className={`p-5 rounded-[6px] border space-y-4 ${
-              isDark ? 'bg-[#16282B] border-[#27393C]' : 'bg-white border-[#C5CEC8] shadow-2xs'
-            }`}>
-              <div className="flex items-center justify-between pb-3 border-b border-inherit">
-                <span className={`text-xs font-mono uppercase tracking-wider ${
-                  isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'
-                }`}>
-                  Inference Output
-                </span>
-                <span className="font-mono text-xs text-[#B3261E] font-semibold">
-                  Heuristic rule engine
-                </span>
+          {/* Results appear only after the user runs classification. */}
+          {hasClassifiedResult && (
+          <section className="space-y-3" aria-live="polite">
+            <div className={`rounded-[6px] border overflow-hidden ${isDark ? 'bg-[#16282B] border-[#27393C]' : 'bg-white border-[#C5CEC8] shadow-2xs'}`}>
+              <div className="flex items-center justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <h3 className={`text-sm font-semibold ${isDark ? 'text-[#E6ECE8]' : 'text-[#17262A]'}`}>Inference Output</h3>
+                  <p className={`text-[11px] mt-1 ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}`}>Classification details and linguistic diagnostics</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsResultsExpanded(prev => !prev)}
+                  aria-expanded={isResultsExpanded}
+                  aria-controls="inference-result-details"
+                  aria-label={isResultsExpanded ? 'Collapse inference details' : 'Expand inference details'}
+                  className={`shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-[4px] border text-xl font-semibold transition-colors cursor-pointer ${isDark ? 'border-[#46595B] text-[#E6ECE8] hover:bg-[#0F1D1F]' : 'border-[#C5CEC8] text-[#17262A] hover:bg-[#F2F5F0]'}`}
+                >
+                  {isResultsExpanded ? '−' : '+'}
+                </button>
               </div>
-
-              {/* Main Classification Result or Rejection Error */}
+              {isResultsExpanded && (
+              <div id="inference-result-details" className="p-5 pt-0 space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-inherit">
+                  <span className={`text-xs font-mono uppercase tracking-wider ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}`}>Detailed results</span>
+                  <span className="font-mono text-xs text-[#B3261E] font-semibold">Heuristic rule engine</span>
+                </div>
+                {/* Main Classification Result or Rejection Error */}
               {singleResult.heuristicScore === 0 ? (
                 <div className="p-4 rounded-[6px] bg-red-500/15 border border-red-500/40 text-red-700 dark:text-red-300 space-y-2">
                   <div className="font-mono text-xs font-bold uppercase flex items-center gap-2">
@@ -1443,10 +1456,11 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                 </span>
               </div>
 
+              </div>
+              )}
             </div>
-
-          </div>
-
+          </section>
+          )}
         </div>
       )}
 
