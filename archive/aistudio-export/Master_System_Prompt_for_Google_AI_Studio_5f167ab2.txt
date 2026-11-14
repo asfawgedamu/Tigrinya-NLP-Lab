@@ -1,0 +1,45 @@
+Act as a Principal UI/UX Architect and Senior Frontend Engineer. Rebuild and refactor the entire portfolio—including the "Resume", "Selected Work / Interactive Labs", and "Projects" tabs—into a unified, ultra-clean, high-contrast dark React single-page application.
+
+================================================================================
+STRICT TECHNICAL STACK & FRAMEWORK MANDATE
+================================================================================
+1. SCRIPTING / LOGIC LANGUAGE:
+   - Modern React (JSX / ES6+) using standard React Hooks (`useState`, `useEffect`, `useRef`).
+   - Write everything in a clean, self-contained single-file component structure (`App.jsx`).
+
+2. HTML / DOM STRUCTURE:
+   - Modern semantic HTML5 elements (`<nav>`, `<main>`, `<section>`, `<header>`, `<footer>`, `<article>`).
+   - SPA Architecture: Use clean tabbed navigation state (`activeTab`) with ZERO full-page reloads.
+
+3. CSS & STYLING ENGINE:
+   - Framework: Tailwind CSS (v3 utility classes).
+   - Theme Canvas: Slate Dark Canvas (`bg-slate-950` / `#020617`).
+   - Primary Cards: Glassmorphic Slate (`bg-slate-900/80` or `bg-slate-900/60` with `border-slate-800` and `backdrop-blur-xl`).
+   - Inner Utility Containers: Deep Slate (`bg-slate-950` with subtle `border-slate-800`).
+   - Accent Palette: Electric Cyan (`text-cyan-400`, `bg-cyan-400 text-slate-950 font-bold`), Emerald (`text-emerald-400`), and Purple (`text-purple-400`).
+
+4. ICONS & ASSETS:
+   - Use Lucide React SVG icons exclusively (`lucide-react`).
+
+================================================================================
+STRICT UI/UX RULES & ANTI-PATTERN BAN (APPLY TO RESUME & SELECTED WORK)
+================================================================================
+1. BAN ALL MUDDY GREEN & TEAL CARDS:
+   - NEVER use `#0e1a1c`, `#132426`, or dark green container backgrounds anywhere on the site, especially in "Selected Work" or "Resume".
+   - ALL card containers must use `bg-slate-900/80` or `bg-slate-950` with `border-slate-800`.
+
+2. WCAG AA CONTRAST & TYPOGRAPHY:
+   - Headings & Primary Titles: Stark Crisp White (`text-white` / `#ffffff`).
+   - Body Text & Bullet Points: High-contrast Slate (`text-slate-200` or `text-slate-300`). NEVER use low-contrast grey-blue text.
+   - Metadata & Monospace Labels: Electric Cyan (`text-cyan-400` / `font-mono`).
+
+3. BAN "BORDER HELL" & NESTED BOX OVERLOAD:
+   - Remove hard inner outlines around every small button or paragraph. Group content naturally using subtle background color shifts (`bg-slate-950` vs `bg-slate-900`) and whitespace padding (`p-6`).
+
+4. RESUME & SELECTED WORK PAGE SPECIFICS:
+   - "Selected Work / Tigrinya Dialect Lab": Structure into a clean 2-column layout:
+     * Left Column (7 cols): Sample selectors, input text area, and Electric Cyan execution button (`bg-cyan-400 text-slate-950 font-bold`).
+     * Right Column (5 cols): High-contrast output diagnostic panel (`bg-slate-950 border-slate-800`) with clear probability progress bars for Variety Z, Variety L, and Variety D.
+   - "Resume / Professional Experience": Present Ethio Telecom Tech Horizon CoE (19+ Years) and Academic Degrees (M.Sc., B.Sc., B.A.) using clean timeline cards with cyan bullet points and highlight tags, avoiding clustered boxes.
+
+Generate a self-contained, fully interactive React component conforming to these exact guidelines.

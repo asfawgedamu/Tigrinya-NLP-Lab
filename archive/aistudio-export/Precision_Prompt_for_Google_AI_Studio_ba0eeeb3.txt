@@ -1,0 +1,25 @@
+Fix the validation and classification logic in the Tigrinya Dialect Identification Playground ("Selected Work" / "Interactive Labs").
+
+ISSUE TO FIX:
+The input validation is currently too strict and incorrectly refuses valid Tigrinya news/political text (raising "Classification Refused: Non-Tigrinya or Amharic input detected"). It falsely triggers on shared Ge'ez loanwords and proper nouns (e.g., "ኢምሬትስ", "ፕረዚዳንት", "ትግራይ").
+
+CORRECTION & CLASSIFICATION LOGIC INSTRUCTIONS:
+
+1. REMOVE STRICT FALSE-POSITIVE REFUSAL RULES:
+   - Do NOT refuse text written in Ge'ez script that contains valid Tigrinya verbs, markers, or prepositions (e.g., ኣለዉ, ኢሎም, ኮይኖም, እዮም, ን-, ብ-, -ኦም, -ኦኣ).
+   - ONLY refuse input if it is predominantly Latin/English script (e.g., "Hello world"), non-Ge'ez script, or purely Amharic sentences that explicitly lack Tigrinya grammatical markers.
+
+2. ENHANCE TIGRINYA DETECTION HEURISTIC:
+   - If the input contains Ge'ez script, scan for core Tigrinya markers:
+     * Tigrinya auxiliary/existential verbs: ኣለዉ, ኣለኹ, ኣለና, እዩ, እዮም, ኢሎም, ኮይኖም.
+     * Tigrinya-specific dialect indicators: 
+       - Variety Z (Standard/Central): መቐለ, ንሕና, ይቕጽል, ዩኒቨርሲቲ.
+       - Variety L (Southern/Eastern): ኣለኹ, ሕጂ, ገዛይ.
+       - Variety D (Raya/Southern): ዱብር, ዓዲ, ወዲ.
+   - If Tigrinya markers are present (even alongside proper nouns or loanwords), ALWAYS execute the classification and return the predicted dialect confidence distribution.
+
+3. REFUSAL UI BEHAVIOR (ONLY FOR NON-GE'EZ / ENGLISH):
+   - Only display "Classification Refused" when the user types plain English/Latin text or numbers without Ge'ez script.
+   - For all valid Ge'ez Tigrinya text, seamlessly perform Char-CNN classification without blocking the user.
+
+Update the `handleClassify` function and the input validation guard in `App.jsx` to reflect these exact rules.

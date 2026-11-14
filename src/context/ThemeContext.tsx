@@ -41,7 +41,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Update meta theme-color for browser tab matching
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.setAttribute('content', theme === 'dark' ? '#0F1D1F' : '#ECEFEA');
+      meta.setAttribute('content', theme === 'dark' ? '#0F172A' : '#F3F2EF');
     }
   }, [theme]);
 

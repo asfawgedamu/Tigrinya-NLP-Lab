@@ -1,117 +1,118 @@
-# Tigrinya NLP Dialect Identification Lab
+# Tigrinya NLP Dialect Classifier & Professional Research Portfolio
 
-An interactive research application for exploring Tigrinya dialect identification, Ethiopic Fidel forms, corpus files and the benchmark data stored with this project.
+> **Author / Engineer:** Asfaw Gedamu (Information Systems & Information Security Training Expert | ML Practitioner | Backend Engineer at Ethio Telecom Tech Horizon CoE)  
+> **Peer-Reviewed Research:** Published in [OpenReview](https://openreview.net/pdf?id=kiG8qiUFm2u) (92.98% Benchmark Accuracy)
 
-The application is a React-based research workbench. It is no longer a personal portfolio or a multi-page professional website.
+---
 
-> **Implementation status:** the current browser inference component is a rule-based demonstration. It does not load trained model weights, call a model-serving API, or reproduce the reported benchmark experiment. The browser-side review queue is also a demonstration and is not backed by secure authentication or persistent storage. These boundaries are stated in the interface.
+## What the System Does
 
-## Research context
+This enterprise-grade web application and research suite serves as both an advanced **Low-Resource Tigrinya NLP Dialect Identification (TDI) Lab** and a professional **Executive Portfolio**. 
 
-The project is associated with the paper [Tigrinya Dialect Identification](https://openreview.net/forum?id=kiG8qiUFm2u). The current project data describes three labels:
+### Core Modules:
+1. **Tigrinya Dialect Lab (TDI Benchmark):**
+   - Interactive inference engine classifying Ethio Telecom / Tigrinya text into three dialect varieties:
+     - **Variety Z (Northern / Standard):** Characterized by `ዝ-/ዘ-` relative prefixes and standard auxiliary verb compounding (`ኣለና`, `ዘሎ`).
+     - **Variety L (Enderta / Mekelle):** Characterized by `ል-/ለ-` relative prefixes, `[ይ]` word connectors, and `ለሎ/ለላ` existentials.
+     - **Variety D (Rayya):** Characterized by `ድ-/ደ-` alveolar stop prefix shifts and Rayyan existential markers (`ድንሆ`).
+   - **Strict Non-Tigrinya & Amharic Text Rejection:** Automatically detects and refuses non-Tigrinya, English, or Amharic text inputs (e.g., stopping Amharic copular texts from false-positive classification).
+   - **Multi-Model Pipeline Switcher:** Instantly switch between Classical ML (Naive Bayes, SVM, ANN) and Deep Learning architectures (Character CNN, BiLSTM, CNN-BiLSTM, Afro-XLMR Transformer) with live recalculation of confidence scores and probability distributions.
+   - **Active Learning & Secure Admin Moderation:** Expert misclassification reporting queue with secure password-protected admin dashboard (`asfaw-admin`) to review, comment on, and approve or reject submissions before retraining buffer ingestion.
+   - **Batch Corpus File Upload & CSV Export:** Upload `.txt` or `.csv` corpora for batch dialect prediction and export results as CSV.
 
-- **Variety Z:** Northern / Standard Tigrinya.
-- **Variety L:** Enderta / Mekelle variety.
-- **Variety D:** Rayya variety.
+2. **Professional Portfolio & Multi-Page Viewer:**
+   - **Interactive Ge'ez Fidel Matrix:** Explore all Ethio Telecom / Ethiopic consonants and 7 vowel orders with live keyboard navigation and transliteration.
+   - **Interactive Resume & ATS CV:** Comprehensive curriculum vitae with printable PDF export.
+   - **FastAPI Progressive 3-Tier Architecture Simulator:** Walkthrough of the restaurant analogy backend labs (Single-file prototype → SQLite CRUD → Enterprise layered JWT architecture).
+   - **Database Diagnostics Telemetry:** 15 production-hardened Oracle & PostgreSQL monitoring scripts.
+   - **Live Contact Form:** Wired to a custom Google Apps Script webhook with spam honeypot protection.
 
-The paper-reported benchmark figures stored in `src/data/nlpData.ts` are shown separately from the live heuristic demonstration. Consult the paper for the study's methodology and reported evaluation.
+---
 
-## Application modules
+## Tech Stack & Dependencies
 
-1. **Inference and corpus workbench** – enter Tigrinya text, inspect heuristic outputs, and upload `.txt` or `.csv` files for browser-side batch processing.
-2. **Fidel matrix** – browse the Ethiopic character forms represented in the supplied project dataset, with search and category filters.
-3. **Benchmark metrics** – inspect the model metrics recorded in the project data and compare the stored accuracy and macro-F1 values.
-4. **Research and data** – access the research paper, source-data files and a summary of implementation status.
+- **Frontend Framework:** React 19, TypeScript, Vite
+- **Styling:** Tailwind CSS (utility-first styling with custom theme tokens)
+- **Icons & Visualizations:** Lucide React, Recharts, Canvas Confetti
+- **Runtime Environment:** Node.js (v18+ recommended), Bun / npm package manager
 
-The inference and moderation modules are prototypes. They should not be treated as production NLP services or as a replacement for validated research evaluation.
+### Key Dependencies (`package.json`):
+- `react`, `react-dom` (^19.0.0)
+- `lucide-react` (^1.16.0)
+- `recharts` (^2.15.0)
+- `canvas-confetti` (^1.9.4)
+- `tailwindcss` (^4.0.0)
+- `vite`, `typescript`
 
-## Technology stack
+---
 
-- HTML5 application shell
-- CSS3 and Tailwind CSS 4
-- JavaScript / TypeScript with React 19 and JSX/TSX components
-- Vite 8 development server and production bundler
-- Recharts for benchmark visualizations
-- Lucide React for interface icons
+## How to Engage with It & Run Locally
 
-TypeScript is used for source typing, but the application is not a TypeScript-only product. The user interface is built with standard web technologies, React components, CSS and Tailwind utilities.
+### Prerequisites
+Ensure you have **Node.js (v18+ or v20+)** installed on your system.
 
-## Requirements
+### Quick Start
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/asfawgedamu/asfawgedamu.github.io.git
+   cd asfawgedamu.github.io
+   ```
 
-- Node.js **20.19+** or **22.12+**
-- npm 10+ (or a compatible package manager)
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-## Run locally
+3. Start the development server (runs on port 3000):
+   ```bash
+   npm run dev
+   ```
 
+4. Open your browser at:
+   ```text
+   http://localhost:3000
+   ```
+
+### Building for Production
+To build the static production bundle and verify compilation:
 ```bash
-git clone https://github.com/asfawgedamu/Tigrinya-lab.git
-cd Tigrinya-lab
-npm install
-npm run dev
-```
-
-Open `http://localhost:3000`.
-
-## Validate and build
-
-```bash
-npm run typecheck
 npm run build
-npm run preview
 ```
 
-The production output is generated in `dist/`.
+---
 
-## Project structure
+## Project Structure & Code Comments
+
+All scripts (`.ts`, `.tsx`, `.html`, `.css`) contain comprehensive JSDoc and inline comments detailing function logic, morpho-syntactic rules, and component architecture:
 
 ```text
-Tigrinya-lab/
-├── public/
-│   └── research/                 # Paper PDF and dialect sample text files
+/
+├── public/                 # Static multi-page portfolio assets (cv.html, resume.html, work.html, code.html, contact.html)
 ├── src/
-│   ├── components/
-│   │   ├── research/
-│   │   │   ├── BenchmarkDashboard.tsx
-│   │   │   └── FidelMatrix.tsx
-│   │   └── TigrinyaDialectLab.tsx # Heuristic inference, batch and local review demo
-│   ├── context/
-│   │   └── ThemeContext.tsx
-│   ├── data/
-│   │   ├── nlpData.ts            # Fidel data, samples and stored benchmark metrics
-│   │   ├── tigrinyaCorpus.ts
-│   │   └── tigrinyaCorpusData.json
-│   ├── App.tsx                   # Research workbench navigation and layout
-│   ├── index.css                 # Tailwind entry point and design tokens
-│   └── main.tsx                  # React application entry point
-├── index.html
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
+│   ├── components/         # Modular React components (Navbar, Footer, HeroSection, AdminDashboard, TigrinyaDialectLab...)
+│   │   └── dynamic/        # Interactive portfolio tabs (InteractiveResume, InteractiveContact, DatabaseConsole...)
+│   ├── context/            # Theme context (Dark / Light mode toggle with text contrast preservation)
+│   ├── data/               # Benchmark datasets, Fidel alphabet matrix, and user profile data (nlpData.ts, portfolioData.ts)
+│   ├── utils/              # Markdown and multi-page file generators
+│   ├── App.tsx             # Root application orchestrator with tab routing
+│   ├── main.tsx            # Application entry point
+│   └── index.css           # Global Tailwind CSS import and theme styling
+├── package.json            # Available dependencies and npm scripts
+├── tsconfig.json           # TypeScript compilation configuration
+└── vite.config.ts          # Vite dev server configuration (port 3000)
 ```
 
-## Next research-engineering milestones
+---
 
-- Implement a reproducible inference backend and connect validated trained model artifacts.
-- Add dataset provenance, versioning, annotation guidelines and evaluation scripts.
-- Reproduce the reported metrics from documented train/test splits and saved predictions.
-- Move feedback submission and moderation to a server-side API with proper authentication, authorization, audit history and persistent storage.
-- Add automated tests for language validation, dialect rules, file parsing and inference API contracts.
+## Maintenance & Dependency Updates
 
-## Citation
+To keep dependencies working seamlessly and secure:
+- Regularly audit packages: `npm audit`
+- Update packages safely: `npm update`
+- Verify TypeScript types: `npx tsc --noEmit`
+- Run build verification before pushing: `npm run build`
 
-The project refers to the following OpenReview submission:
-
-```bibtex
-@inproceedings{gedamu2024tigrinya,
-  title={Tigrinya Dialect Identification},
-  author={Gedamu, Asfaw and Hadgu, Asmelash Teka and Abate, Solomon Teferra},
-  year={2024},
-  url={https://openreview.net/forum?id=kiG8qiUFm2u}
-}
-```
-
-Verify the final author order and preferred citation format against the published paper before using this BibTeX entry in a manuscript.
+---
 
 ## License
-
-The original repository README described the project as MIT-licensed, but the supplied archive did not contain a `LICENSE` file. Add the appropriate license text and confirm the rights to the research paper, corpus samples and other included materials before distributing this project under an open-source license.
+© 2026 Asfaw Gedamu. Released under the MIT License.

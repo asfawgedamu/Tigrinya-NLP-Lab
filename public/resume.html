@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resume & Portfolio | Asfaw Gedamu</title>
+  <meta name="description" content="Experience, education and skills of Asfaw Gedamu: Information Systems & Security Training Expert, ML Practitioner, and Backend Engineer.">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="author" content="Asfaw Gedamu">
+
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Asfaw Gedamu Portfolio">
+  <meta property="og:title" content="Resume & Portfolio | Asfaw Gedamu">
+  <meta property="og:description" content="Information Systems and Information Security Training Expert, ML Practitioner & Systems Architect.">
+  <meta property="og:url" content="https://asfawgedamu.github.io/resume.html">
+  
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0284c7',
+              600: '#0284c7',
+              700: '#0369a1',
+              900: '#0c4a6e',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Newsreader', 'serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* CSS Theme Custom Variables for Dynamic & Clean UI Architecture */
+    :root {
+      --bg-body: #f8fafc;
+      --bg-header: rgba(255, 255, 255, 0.85);
+      --card-bg: #ffffff;
+      --card-inner-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-subtle: #64748b;
+      --accent: #2563eb;
+      --accent-badge: #eff6ff;
+      --accent-badge-text: #1d4ed8;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+      --badge-invert-bg: #0f172a;
+      --badge-invert-text: #ffffff;
+    }
+
+    [data-theme="dark"] {
+      --bg-body: #090d16;
+      --bg-header: rgba(15, 23, 42, 0.85);
+      --card-bg: #0f172a;
+      --card-inner-bg: #0b1220;
+      --card-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #cbd5e1;
+      --text-subtle: #94a3b8;
+      --accent: #38bdf8;
+      --accent-badge: #1e3a8a;
+      --accent-badge-text: #93c5fd;
+      --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 12px 30px -8px rgba(0, 0, 0, 0.6);
+      --badge-invert-bg: #ffffff;
+      --badge-invert-text: #0f172a;
+    }
+
+    body {
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .themed-card {
+      background-color: var(--card-bg) !important;
+      border: 1px solid var(--card-border);
+      box-shadow: var(--shadow-md);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .themed-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    .themed-inner-card {
+      background-color: var(--card-inner-bg) !important;
+      border: 1px solid var(--card-border);
+    }
+
+    .themed-header {
+      background-color: var(--bg-header);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .text-themed-main { color: var(--text-main); }
+    .text-themed-muted { color: var(--text-muted); }
+    .text-themed-subtle { color: var(--text-subtle); }
+    .text-themed-accent { color: var(--accent); }
+
+    /* Custom print layout formatting */
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .themed-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        background-color: #ffffff !important;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+
+  <script>
+    /* Theme initialization script run early to prevent flash of unstyled content */
+    (function () {
+      try {
+        var savedTheme = localStorage.getItem("theme");
+        var systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var theme = savedTheme || (systemDark ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+        if (theme === "dark") {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+
+<body class="min-h-screen flex flex-col justify-between selection:bg-blue-500 selection:text-white">
+
+  <!-- Skip Navigation for Accessibility -->
+  <a class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 z-50 bg-blue-600 text-white px-4 py-2 rounded-md shadow-lg" href="#main-content">
+    Skip to main content
+  </a>
+
+  <!-- Main Sticky Header Navigation -->
+  <header class="themed-header sticky top-0 z-40 w-full transition-colors duration-300">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 sm:h-20">
+        
+        <!-- Brand Name / Logo -->
+        <a href="index.html" class="group flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-bold text-xl shadow-md group-hover:scale-105 transition-transform duration-200">
+            AG
+          </div>
+          <div class="flex flex-col">
+            <span class="font-bold text-lg tracking-tight text-themed-main group-hover:text-blue-600 transition-colors">Asfaw Gedamu</span>
+            <span class="text-xs text-themed-subtle -mt-1 font-mono">Senior Engineer & Trainer</span>
+          </div>
+        </a>
+
+        <!-- Desktop Navigation Links -->
+        <nav class="hidden md:flex items-center space-x-1 lg:space-x-2" aria-label="Primary Navigation">
+          <a href="#about" class="px-3 py-2 rounded-lg text-sm font-medium text-themed-muted hover:text-themed-accent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">About</a>
+          <a href="#experience" class="px-3 py-2 rounded-lg text-sm font-medium text-themed-muted hover:text-themed-accent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">Experience</a>
+          <a href="#skills" class="px-3 py-2 rounded-lg text-sm font-medium text-themed-muted hover:text-themed-accent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">Skills</a>
+          <a href="#education" class="px-3 py-2 rounded-lg text-sm font-medium text-themed-muted hover:text-themed-accent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">Education</a>
+          <a href="#projects" class="px-3 py-2 rounded-lg text-sm font-medium text-themed-muted hover:text-themed-accent hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">Projects</a>
+        </nav>
+
+        <!-- Right Side Nav Actions & Toggle Button -->
+        <div class="flex items-center space-x-3">
+          <!-- Dark Mode Toggle Button -->
+          <button id="themeToggle" type="button" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Toggle Color Theme" title="Switch Theme">
+            <i class="fa-solid fa-sun text-amber-500 hidden dark:inline text-lg"></i>
+            <i class="fa-solid fa-moon text-indigo-600 dark:hidden text-lg"></i>
+          </button>
+
+          <!-- Quick Action: Print Resume -->
+          <button onclick="window.print()" class="hidden sm:inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm shadow-sm transition-all focus:ring-2 focus:ring-blue-400 no-print">
+            <i class="fa-solid fa-print"></i>
+            <span>Print CV</span>
+          </button>
+
+          <!-- Mobile Hamburger Menu Button -->
+          <button id="menuBtn" type="button" class="md:hidden p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-themed-main hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" aria-label="Open Navigation Menu">
+            <i class="fa-solid fa-bars text-lg" id="menuIcon"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Dropdown Navigation Menu -->
+    <div id="mobileMenu" class="hidden md:hidden border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg px-4 pt-2 pb-4 space-y-1">
+      <a href="#about" class="block px-3 py-2 rounded-md text-base font-medium text-themed-muted hover:bg-slate-100 dark:hover:bg-slate-800">About</a>
+      <a href="#experience" class="block px-3 py-2 rounded-md text-base font-medium text-themed-muted hover:bg-slate-100 dark:hover:bg-slate-800">Experience</a>
+      <a href="#skills" class="block px-3 py-2 rounded-md text-base font-medium text-themed-muted hover:bg-slate-100 dark:hover:bg-slate-800">Skills</a>
+      <a href="#education" class="block px-3 py-2 rounded-md text-base font-medium text-themed-muted hover:bg-slate-100 dark:hover:bg-slate-800">Education</a>
+      <a href="#projects" class="block px-3 py-2 rounded-md text-base font-medium text-themed-muted hover:bg-slate-100 dark:hover:bg-slate-800">Projects</a>
+      <div class="pt-2">
+        <button onclick="window.print()" class="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-medium text-sm">
+          <i class="fa-solid fa-print"></i>
+          <span>Print CV / Save PDF</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Resume Content Area -->
+  <main id="main-content" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-grow space-y-8">
+    
+    <!-- Hero Profile Section Card -->
+    <section id="about" class="themed-card rounded-2xl p-6 sm:p-8 relative overflow-hidden">
+      <!-- Decorative Background Accent Blur -->
+      <div class="absolute -right-16 -top-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+        <div class="space-y-4 max-w-3xl">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-mono font-medium tracking-wide bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>CURRICULUM VITAE &amp; TECHNICAL EXPERIENCE</span>
+          </div>
+
+          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-themed-main tracking-tight">
+            Asfaw Gedamu
+          </h1>
+
+          <p class="text-lg sm:text-xl font-medium text-themed-accent leading-relaxed">
+            Information Systems &amp; Security Training Expert | ML Practitioner | Backend Systems Engineer
+          </p>
+
+          <p class="text-themed-muted text-base leading-relaxed">
+            Senior technical leader with <strong class="text-themed-main">19+ years of hands-on impact</strong> at Ethio Telecom. 
+            Bridging production-grade backend engineering (FastAPI, layered architectures, database DBA) with cutting-edge AI research in low-resource Natural Language Processing.
+          </p>
+
+          <!-- Contact Badges / Social Buttons Bar -->
+          <div class="flex flex-wrap gap-2 pt-2">
+            <a href="https://linkedin.com/in/asfawgedamu" target="_blank" rel="noopener" class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-lg bg-[#0077B5] hover:opacity-90 text-white text-xs font-semibold shadow-sm transition-opacity">
+              <i class="fa-brands fa-linkedin text-sm"></i>
+              <span>LinkedIn</span>
+            </a>
+            <a href="https://github.com/asfawgedamu" target="_blank" rel="noopener" class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 text-xs font-semibold shadow-sm transition-opacity">
+              <i class="fa-brands fa-github text-sm"></i>
+              <span>GitHub</span>
+            </a>
+            <a href="mailto:asfawg@gmail.com?subject=Inquiry%20from%20Portfolio" class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-lg bg-[#EA4335] hover:opacity-90 text-white text-xs font-semibold shadow-sm transition-opacity">
+              <i class="fa-solid fa-envelope text-sm"></i>
+              <span>Email Me</span>
+            </a>
+            <button onclick="copyEmail()" class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-themed-muted hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium transition-colors" title="Copy email address">
+              <i class="fa-regular fa-copy"></i>
+              <span id="copyText">Copy Email</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Summary Metrics Card -->
+        <div class="w-full md:w-auto flex-shrink-0 grid grid-cols-2 md:grid-cols-1 gap-3 p-4 rounded-xl themed-inner-card">
+          <div class="text-center md:text-left px-2">
+            <span class="block text-2xl font-extrabold text-blue-600 dark:text-blue-400">500+</span>
+            <span class="text-xs font-medium text-themed-subtle uppercase tracking-wider">Engineers Trained</span>
+          </div>
+          <div class="text-center md:text-left px-2 border-l md:border-l-0 md:border-t border-slate-200 dark:border-slate-800 pt-0 md:pt-3">
+            <span class="block text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">92.98%</span>
+            <span class="text-xs font-medium text-themed-subtle uppercase tracking-wider">NLP Model Accuracy</span>
+          </div>
+          <div class="text-center md:text-left px-2 border-t border-slate-200 dark:border-slate-800 pt-3 col-span-2 md:col-span-1">
+            <span class="block text-xl font-bold text-themed-main">Ethio Telecom</span>
+            <span class="text-xs font-medium text-themed-subtle uppercase tracking-wider">Center of Excellence</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Professional Experience Timeline -->
+    <section id="experience" class="themed-card rounded-2xl p-6 sm:p-8 space-y-6">
+      <div class="flex items-center space-x-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-briefcase"></i>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold text-themed-main">Professional Experience</h2>
+          <p class="text-xs text-themed-subtle font-mono">19+ YEARS OF ENTERPRISE LEADERSHIP</p>
+        </div>
+      </div>
+
+      <div class="relative pl-6 sm:pl-8 border-l-2 border-blue-500/30 dark:border-blue-400/20 space-y-8">
+        
+        <!-- Experience Item 1 -->
+        <div class="relative group">
+          <!-- Timeline Indicator Dot -->
+          <div class="absolute -left-[31px] sm:-left-[39px] top-1.5 w-4 h-4 rounded-full bg-blue-600 ring-4 ring-white dark:ring-slate-900 group-hover:scale-125 transition-transform"></div>
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+            <h3 class="text-xl font-bold text-themed-main group-hover:text-blue-600 transition-colors">
+              Information Systems &amp; Security Training Expert / Technical Lead
+            </h3>
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-medium bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 w-fit">
+              2021 &mdash; Present
+            </span>
+          </div>
+
+          <p class="text-sm font-semibold text-themed-accent mb-3">
+            Ethio Telecom, Tech Horizon Center of Excellence (formerly TExA) &bull; Addis Ababa, Ethiopia
+          </p>
+
+          <ul class="space-y-2.5 text-themed-muted text-sm leading-relaxed list-disc list-inside marker:text-blue-500">
+            <li>Upskilled over <strong>500+ professionals</strong> across AI/ML, deep neural networks, cybersecurity frameworks, and FinTech infrastructure.</li>
+            <li>Architected and authored the <strong>API Design Fundamentals</strong> 3-tier evolutionary lab series, enabling teams to build resilient clean architecture microservices.</li>
+            <li>Conducted specialized research on Ethiopic natural language processing, publishing the <strong>Tigrinya Dialect Identification benchmark</strong> (achieving 92.98% accuracy).</li>
+            <li>Currently designing a comprehensive, enterprise-ready full-stack software development curriculum for telecom engineers.</li>
+          </ul>
+        </div>
+
+        <!-- Experience Item 2 -->
+        <div class="relative group">
+          <!-- Timeline Indicator Dot -->
+          <div class="absolute -left-[31px] sm:-left-[39px] top-1.5 w-4 h-4 rounded-full bg-slate-400 dark:bg-slate-600 ring-4 ring-white dark:ring-slate-900 group-hover:scale-125 transition-transform"></div>
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+            <h3 class="text-xl font-bold text-themed-main group-hover:text-blue-600 transition-colors">
+              Senior Database Administrator &amp; Systems Engineer
+            </h3>
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-mono font-medium bg-slate-100 dark:bg-slate-800 text-themed-subtle w-fit">
+              2007 &mdash; 2021
+            </span>
+          </div>
+
+          <p class="text-sm font-semibold text-themed-accent mb-3">
+            Ethio Telecom &bull; Enterprise Operations &amp; Infrastructure
+          </p>
+
+          <ul class="space-y-2.5 text-themed-muted text-sm leading-relaxed list-disc list-inside marker:text-slate-400">
+            <li>Managed, optimized, and automated high-throughput mission-critical Oracle 19c and PostgreSQL database clusters supporting millions of subscriber transactions daily.</li>
+            <li>Authored 15+ automated SQL/PL-SQL diagnostic suites for real-time buffer cache hit monitoring (&gt;99%), blocking lock tree resolution, and index bloat mitigation.</li>
+            <li>Maintained strict 99.99% system availability SLAs across core telecommunication business systems.</li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Skills & Proof Matrix Section Grid -->
+    <section id="skills" class="space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-code"></i>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-themed-main">Skills &amp; Evidence</h2>
+            <p class="text-xs text-themed-subtle font-mono">PRACTICAL DOMAIN COMPETENCIES</p>
+          </div>
+        </div>
+
+        <!-- Filter Buttons for Skills -->
+        <div class="flex flex-wrap gap-1.5 no-print" id="skillFilterContainer">
+          <button data-filter="all" class="filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-blue-600 text-white transition-all">All</button>
+          <button data-filter="ai" class="filter-btn px-3 py-1 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 text-themed-muted hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">AI / ML</button>
+          <button data-filter="backend" class="filter-btn px-3 py-1 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 text-themed-muted hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">Backend</button>
+          <button data-filter="db" class="filter-btn px-3 py-1 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 text-themed-muted hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">Databases</button>
+        </div>
+      </div>
+
+      <!-- Skills Cards Grid (Light theme render pure white cards with crisp contrast) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        
+        <!-- Skill 1 -->
+        <div class="skill-card themed-card rounded-xl p-5 flex flex-col justify-between" data-category="ai">
+          <div class="space-y-3">
+            <!-- Icon and Category Header closely grouped together -->
+            <div class="flex items-center space-x-3 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+              <span class="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 text-base flex-shrink-0">
+                <i class="fa-solid fa-brain"></i>
+              </span>
+              <h3 class="text-lg font-bold text-themed-main tracking-tight leading-snug">Machine Learning</h3>
+            </div>
+            
+            <div class="space-y-1.5 pt-1">
+              <span class="text-[11px] font-mono uppercase tracking-wider font-semibold text-purple-700 dark:text-purple-300 block">
+                ML &amp; Low-Resource NLP
+              </span>
+              <p class="text-xs text-themed-muted leading-relaxed">
+                Python, PyTorch, Pandas, NumPy, Character-level CNNs, dataset construction, low-resource language processing.
+              </p>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <a href="#projects" class="inline-flex items-center space-x-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              <span>Proof: Tigrinya NLP Paper</span>
+              <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Skill 2 -->
+        <div class="skill-card themed-card rounded-xl p-5 flex flex-col justify-between" data-category="backend">
+          <div class="space-y-3">
+            <!-- Icon and Category Header closely grouped together -->
+            <div class="flex items-center space-x-3 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+              <span class="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 text-base flex-shrink-0">
+                <i class="fa-solid fa-server"></i>
+              </span>
+              <h3 class="text-lg font-bold text-themed-main tracking-tight leading-snug">Backend Engineering</h3>
+            </div>
+
+            <div class="space-y-1.5 pt-1">
+              <span class="text-[11px] font-mono uppercase tracking-wider font-semibold text-blue-700 dark:text-blue-300 block">
+                FastAPI &amp; Clean Architecture
+              </span>
+              <p class="text-xs text-themed-muted leading-relaxed">
+                Python 3.11, FastAPI, SQLAlchemy, Pydantic v2, JWT/OAuth2, API versioning, CORS, Pytest, HTTPX testing.
+              </p>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <a href="#projects" class="inline-flex items-center space-x-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              <span>Proof: API Design Series</span>
+              <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Skill 3 -->
+        <div class="skill-card themed-card rounded-xl p-5 flex flex-col justify-between" data-category="db">
+          <div class="space-y-3">
+            <!-- Icon and Category Header closely grouped together -->
+            <div class="flex items-center space-x-3 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+              <span class="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 text-base flex-shrink-0">
+                <i class="fa-solid fa-database"></i>
+              </span>
+              <h3 class="text-lg font-bold text-themed-main tracking-tight leading-snug">Database Systems</h3>
+            </div>
+
+            <div class="space-y-1.5 pt-1">
+              <span class="text-[11px] font-mono uppercase tracking-wider font-semibold text-emerald-700 dark:text-emerald-300 block">
+                DBA &amp; High-Throughput SQL
+              </span>
+              <p class="text-xs text-themed-muted leading-relaxed">
+                PostgreSQL, Oracle 19c, SQL Server, MySQL, SQLite, query tuning, lock triage, AWR/ASH monitoring.
+              </p>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <span class="text-xs font-medium text-themed-subtle">Proof: 14+ years Ethio Telecom DBA</span>
+          </div>
+        </div>
+
+        <!-- Skill 4 -->
+        <div class="skill-card themed-card rounded-xl p-5 flex flex-col justify-between" data-category="backend">
+          <div class="space-y-3">
+            <!-- Icon and Category Header closely grouped together -->
+            <div class="flex items-center space-x-3 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+              <span class="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 text-base flex-shrink-0">
+                <i class="fa-solid fa-shield-halved"></i>
+              </span>
+              <h3 class="text-lg font-bold text-themed-main tracking-tight leading-snug">Security &amp; Ops</h3>
+            </div>
+
+            <div class="space-y-1.5 pt-1">
+              <span class="text-[11px] font-mono uppercase tracking-wider font-semibold text-amber-700 dark:text-amber-300 block">
+                Infosec &amp; Linux Administration
+              </span>
+              <p class="text-xs text-themed-muted leading-relaxed">
+                Information Security training, Linux SysAdmin (RHEL, Ubuntu), threat modeling, access control &amp; compliance.
+              </p>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <span class="text-xs font-medium text-themed-subtle">Proof: Tech Horizon Security Lead</span>
+          </div>
+        </div>
+
+        <!-- Skill 5 -->
+        <div class="skill-card themed-card rounded-xl p-5 flex flex-col justify-between" data-category="ai">
+          <div class="space-y-3">
+            <!-- Icon and Category Header closely grouped together -->
+            <div class="flex items-center space-x-3 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+              <span class="p-2.5 rounded-xl bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300 text-base flex-shrink-0">
+                <i class="fa-solid fa-chalkboard-user"></i>
+              </span>
+              <h3 class="text-lg font-bold text-themed-main tracking-tight leading-snug">Enablement</h3>
+            </div>
+
+            <div class="space-y-1.5 pt-1">
+              <span class="text-[11px] font-mono uppercase tracking-wider font-semibold text-teal-700 dark:text-teal-300 block">
+                Curriculum &amp; Technical Mentorship
+              </span>
+              <p class="text-xs text-themed-muted leading-relaxed">
+                Curriculum design, hands-on lab facilitation, enterprise upskilling, technical documentation.
+              </p>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <span class="text-xs font-medium text-themed-subtle">Proof: 500+ Engineers Mentored</span>
+          </div>
+        </div>
+
+        <!-- Skill 6 -->
+        <div class="skill-card themed-card rounded-xl p-5 flex flex-col justify-between" data-category="backend">
+          <div class="space-y-3">
+            <!-- Icon and Category Header closely grouped together -->
+            <div class="flex items-center space-x-3 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+              <span class="p-2.5 rounded-xl bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-300 text-base flex-shrink-0">
+                <i class="fa-solid fa-toolbox"></i>
+              </span>
+              <h3 class="text-lg font-bold text-themed-main tracking-tight leading-snug">Developer Tools</h3>
+            </div>
+
+            <div class="space-y-1.5 pt-1">
+              <span class="text-[11px] font-mono uppercase tracking-wider font-semibold text-cyan-700 dark:text-cyan-300 block">
+                DevOps &amp; Infrastructure
+              </span>
+              <p class="text-xs text-themed-muted leading-relaxed">
+                Git, GitHub Actions, Docker containerization, VS Code extensions, Linux CLI scripting.
+              </p>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <span class="text-xs font-medium text-themed-subtle">Proof: Open Source Repositories</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Education Section -->
+    <section id="education" class="themed-card rounded-2xl p-6 sm:p-8 space-y-6">
+      <div class="flex items-center space-x-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div class="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/40 text-sky-600 dark:text-sky-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold text-themed-main">Education &amp; Academic Background</h2>
+          <p class="text-xs text-themed-subtle font-mono">ACADEMIC CREDENTIALS</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        <!-- Degree 1 -->
+        <div class="p-5 rounded-xl themed-inner-card space-y-2">
+          <span class="text-[10px] font-mono uppercase tracking-wider font-semibold text-blue-600 dark:text-blue-400">Master of Science</span>
+          <h3 class="text-base font-bold text-themed-main">MSc Information Science</h3>
+          <p class="text-xs text-themed-muted">
+            Specialized in Information Retrieval, Computational Linguistics, and Data Architecture.
+          </p>
+        </div>
+
+        <!-- Degree 2 -->
+        <div class="p-5 rounded-xl themed-inner-card space-y-2">
+          <span class="text-[10px] font-mono uppercase tracking-wider font-semibold text-indigo-600 dark:text-indigo-400">Bachelor of Science</span>
+          <h3 class="text-base font-bold text-themed-main">BSc Computer Science</h3>
+          <p class="text-xs text-themed-muted">
+            Focus on Algorithms, Data Structures, Relational Database Management &amp; Systems.
+          </p>
+        </div>
+
+        <!-- Degree 3 -->
+        <div class="p-5 rounded-xl themed-inner-card space-y-2">
+          <span class="text-[10px] font-mono uppercase tracking-wider font-semibold text-teal-600 dark:text-teal-400">Bachelor of Arts</span>
+          <h3 class="text-base font-bold text-themed-main">BA Journalism &amp; Comms</h3>
+          <p class="text-xs text-themed-muted">
+            Technical Communication, Media Strategy, Professional Training &amp; Pedagogy.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Key Projects / Proof Points -->
+    <section id="projects" class="themed-card rounded-2xl p-6 sm:p-8 space-y-6">
+      <div class="flex items-center space-x-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-flask"></i>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold text-themed-main">Featured Projects &amp; Publications</h2>
+          <p class="text-xs text-themed-subtle font-mono">RESEARCH &amp; SOFTWARE REPOSITORIES</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Project 1 -->
+        <div class="p-6 rounded-xl themed-inner-card space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-themed-main">Tigrinya Dialect Identification</h3>
+            <span class="text-xs font-mono px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-semibold">NLP Research</span>
+          </div>
+          <p class="text-xs text-themed-muted leading-relaxed">
+            Published benchmark evaluation using character-level Convolutional Neural Networks (CNN) for low-resource Ethiopic languages. Achieved a state-of-the-art 92.98% identification accuracy.
+          </p>
+          <div class="flex items-center justify-between text-xs pt-2">
+            <span class="font-mono text-themed-subtle">OpenReview: kiG8qiUFm2u</span>
+            <a href="https://github.com/asfawgedamu" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center space-x-1">
+              <span>View Paper / Code</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Project 2 -->
+        <div class="p-6 rounded-xl themed-inner-card space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-themed-main">API Design Fundamentals Series</h3>
+            <span class="text-xs font-mono px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 font-semibold">Backend Engineering</span>
+          </div>
+          <p class="text-xs text-themed-muted leading-relaxed">
+            Comprehensive 3-tier evolutionary lab course detailing FastAPI, Pydantic v2, dependency injection, async database persistence, and automated HTTPX test suites for enterprise teams.
+          </p>
+          <div class="flex items-center justify-between text-xs pt-2">
+            <span class="font-mono text-themed-subtle">Python 3.11 / FastAPI</span>
+            <a href="https://github.com/asfawgedamu" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 hover:underline font-semibold flex items-center space-x-1">
+              <span>Explore Repository</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer Section -->
+  <footer class="themed-card border-t border-slate-200 dark:border-slate-800 mt-12 py-8 transition-colors">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+          AG
+        </div>
+        <p class="text-xs text-themed-subtle">
+          &copy; <span id="year">2026</span> Asfaw Gedamu. Built with standard UI/UX dynamic themes.
+        </p>
+      </div>
+
+      <!-- Footer Quick Social Links -->
+      <div class="flex items-center space-x-4">
+        <a href="https://linkedin.com/in/asfawgedamu" target="_blank" rel="noopener" class="text-themed-subtle hover:text-blue-600 text-sm transition-colors" aria-label="LinkedIn Profile">
+          <i class="fa-brands fa-linkedin text-lg"></i>
+        </a>
+        <a href="https://github.com/asfawgedamu" target="_blank" rel="noopener" class="text-themed-subtle hover:text-themed-main text-sm transition-colors" aria-label="GitHub Profile">
+          <i class="fa-brands fa-github text-lg"></i>
+        </a>
+        <a href="mailto:asfawg@gmail.com" class="text-themed-subtle hover:text-red-500 text-sm transition-colors" aria-label="Send Email">
+          <i class="fa-solid fa-envelope text-lg"></i>
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Interactive Logic Script -->
+  <script>
+    // Set dynamic current year in footer
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Theme Switch Logic
+    const themeToggleBtn = document.getElementById('themeToggle');
+    
+    function toggleTheme() {
+      const htmlEl = document.documentElement;
+      const currentTheme = htmlEl.getAttribute('data-theme') || 'light';
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      
+      htmlEl.setAttribute('data-theme', newTheme);
+      if (newTheme === 'dark') {
+        htmlEl.classList.add('dark');
+      } else {
+        htmlEl.classList.remove('dark');
+      }
+      
+      try {
+        localStorage.setItem('theme', newTheme);
+      } catch (e) {}
+    }
+
+    if (themeToggleBtn) {
+      themeToggleBtn.addEventListener('click', toggleTheme);
+    }
+
+    // Mobile menu toggle
+    const menuBtn = document.getElementById('menuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    
+    if (menuBtn && mobileMenu) {
+      menuBtn.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+      });
+    }
+
+    // Copy Email helper function
+    function copyEmail() {
+      const email = "asfawg@gmail.com";
+      const copyTextSpan = document.getElementById('copyText');
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(email).then(showCopied).catch(fallbackCopy);
+      } else {
+        fallbackCopy();
+      }
+
+      function fallbackCopy() {
+        const input = document.createElement('input');
+        input.value = email;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showCopied();
+      }
+
+      function showCopied() {
+        if (copyTextSpan) {
+          copyTextSpan.textContent = "Copied!";
+          setTimeout(() => {
+            copyTextSpan.textContent = "Copy Email";
+          }, 2000);
+        }
+      }
+    }
+
+    // Skills Filter Interactive Logic
+    const filterContainer = document.getElementById('skillFilterContainer');
+    if (filterContainer) {
+      const filterBtns = filterContainer.querySelectorAll('.filter-btn');
+      const skillCards = document.querySelectorAll('.skill-card');
+
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const filter = btn.getAttribute('data-filter');
+          
+          // Reset button styles
+          filterBtns.forEach(b => {
+            b.className = "filter-btn px-3 py-1 rounded-lg text-xs font-medium border border-slate-200 dark:border-slate-700 text-themed-muted hover:bg-slate-100 dark:hover:bg-slate-800 transition-all";
+          });
+          
+          // Highlight active button
+          btn.className = "filter-btn px-3 py-1 rounded-lg text-xs font-medium bg-blue-600 text-white transition-all";
+
+          // Filter card visibility
+          skillCards.forEach(card => {
+            if (filter === 'all' || card.getAttribute('data-category') === filter) {
+              card.style.display = 'flex';
+            } else {
+              card.style.display = 'none';
+            }
+          });
+        });
+      });
+    }
+  </script>
+</body>
+</html>
