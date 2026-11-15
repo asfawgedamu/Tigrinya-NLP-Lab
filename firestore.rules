@@ -8,7 +8,7 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null
         && request.auth.token.email_verified == true
-        && request.auth.token.email == 'REPLACE_WITH_YOUR_GOOGLE_EMAIL@gmail.com';
+        && request.auth.token.email == 'asfawg@gmail.com';
     }
 
     function isText(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
