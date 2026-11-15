@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "Comment": {
+      "title": "Comment",
+      "description": "Visitor comment or research inquiry",
+      "type": "object",
+      "properties": {
+        "author": { "type": "string", "maxLength": 100 },
+        "affiliation": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "enum": ["General Feedback", "Dialect Inquiry", "Research Discussion", "Feature Request"] },
+        "text": { "type": "string", "maxLength": 2000 },
+        "timestamp": { "type": "string" },
+        "upvotes": { "type": "integer" },
+        "replies": { "type": "array" }
+      },
+      "required": ["author", "category", "text"]
+    },
+    "FeedbackSubmission": {
+      "title": "FeedbackSubmission",
+      "description": "Dialect misclassification report for moderation",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "maxLength": 2000 },
+        "predicted": { "type": "string" },
+        "errorType": { "type": "string" },
+        "correct": { "type": "string" },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "timestamp": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending Validation", "Approved", "Rejected"] },
+        "moderatorComment": { "type": "string" }
+      },
+      "required": ["text", "predicted", "correct", "status"]
+    }
+  },
+  "firestore": {
+    "/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/Comment" },
+      "description": "Public visitor comments and research inquiries"
+    },
+    "/feedbackSubmissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/FeedbackSubmission" },
+      "description": "Dialect misclassification reports for admin review"
+    }
+  }
+}

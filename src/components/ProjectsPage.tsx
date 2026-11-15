@@ -18,7 +18,7 @@ export const ProjectsPage: React.FC = () => {
   const [adminQueue, setAdminQueue] = useState<FeedbackSubmission[]>([
     {
       id: 'fb-sample-1',
-      text: 'ንሕና ኣብ መቐለ ዩኒቨርሲቲ ንሰርሕ ኣለና። እቲ ናይ ምርምር ስራሕ ብጽቡቕ ይቕጽል ኣሎ።',
+      text: 'ዝድለዩዎ ዓይነት ናይ ትግርኛ ፅሑፍ ኣብዚ ይፅሓፉ ወይ ካብ ካሊእ Copy ገይሮም ኣብዚ paste ይግበሩ።',
       predicted: 'Variety Z (Standard)',
       errorType: 'False Positive',
       correct: 'Variety L (Enderta/Mekelle)',

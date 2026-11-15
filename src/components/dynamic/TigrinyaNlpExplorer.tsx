@@ -38,7 +38,7 @@ interface DatasetRow {
 
 // Initial curated batch of real annotated sentences reflecting Asfaw's paper
 const INITIAL_ANNOTATED_BATCH: DatasetRow[] = [
-  { id: 'z1', text: 'ንሕና ኣብ መቐለ ዩኒቨርሲቲ ንሰርሕ ኣለና። እቲ ናይ ምርምር ስራሕ ብጽቡቕ ይቕጽል ኣሎ።', actualVariety: 'Variety Z', source: 'Kilte Zantatat' },
+  { id: 'z1', text: 'ዝድለዩዎ ዓይነት ናይ ትግርኛ ፅሑፍ ኣብዚ ይፅሓፉ ወይ ካብ ካሊእ Copy ገይሮም ኣብዚ paste ይግበሩ።', actualVariety: 'Variety Z', source: 'Kilte Zantatat' },
   { id: 'z2', text: 'እቲ መጽሓፍ ኣብ ቀረባ ግዜ ተሓቲሙ ንኣንበብቲ ክበጽሕ እዩ።', actualVariety: 'Variety Z', source: 'Kilte Zantatat' },
   { id: 'z3', text: 'ኣብ መቐለ ዘሎ ናይ ቴክኖሎጂ ማእከል ብዕቱብ ይስራሕ ኣሎ።', actualVariety: 'Variety Z', source: 'Tigray Corpus' },
   { id: 'z4', text: 'ተምሃሮ ኣብ ክፍሊ ኮይኖም ትምህርቶም ብጽሞና ይከታተሉ ኣለዉ።', actualVariety: 'Variety Z', source: 'Academic Corpus' },
@@ -685,7 +685,7 @@ export const TigrinyaNlpExplorer: React.FC = () => {
                 className={`w-full p-3 rounded-lg border text-xs font-mono focus:outline-none ${
                   isDark ? 'bg-slate-900 border-slate-700 text-slate-100' : 'bg-white border-slate-300 text-slate-900'
                 }`}
-                placeholder={`Example rows:\nንሕና ኣብ መቐለ ዩኒቨርሲቲ ንሰርሕ ኣለና።,Variety Z\nኣብቲ ዓዲ ዝነበሩ ዓበይቲ ዓዲ ንኩሉ ብዕርቂን ብሰላምን ፈቲሖሞ።,Variety L\nንሕና ኣብ ኣስመራ ብሓንሳእ ኮይና ንሰርሕ ኣሎና።,Variety D`}
+                placeholder={`Example rows:\nዝድለዩዎ ዓይነት ናይ ትግርኛ ፅሑፍ ኣብዚ ይፅሓፉ ወይ ካብ ካሊእ Copy ገይሮም ኣብዚ paste ይግበሩ。,Variety Z\nኣብቲ ዓዲ ዝነበሩ ዓበይቲ ዓዲ ንኩሉ ብዕርቂን ብሰላምን ፈቲሖሞ።,Variety L\nንሕና ኣብ ኣስመራ ብሓንሳእ ኮይና ንሰርሕ ኣሎና።,Variety D`}
               />
               <div className="flex items-center justify-between">
                 <span className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>

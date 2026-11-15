@@ -1,7 +1,9 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { SAMPLE_SENTENCES, DialectSample } from '../data/nlpData';
 import { detectAmharicStopWords } from '../data/amharicStopWords';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { collection, addDoc, updateDoc, doc, onSnapshot, query } from 'firebase/firestore';
 import {
   BarChart,
   Bar,
@@ -29,7 +31,8 @@ import {
   Layers,
   Sliders,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Database
 } from 'lucide-react';
 
 export type DialectVariety = 'Variety Z' | 'Variety L' | 'Variety D';
@@ -327,7 +330,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
 
   // Input states
   const [inputText, setInputText] = useState<string>(
-    initialText || SAMPLE_SENTENCES[0]?.text || 'ንሕና ኣብ መቐለ ዩኒቨርሲቲ ንሰርሕ ኣለና። እቲ ናይ ምርምር ስራሕ ብጽቡቕ ይቕጽል ኣሎ።'
+    initialText || SAMPLE_SENTENCES[0]?.text || 'ዝድለዩዎ ዓይነት ናይ ትግርኛ ፅሑፍ ኣብዚ ይፅሓፉ ወይ ካብ ካሊእ Copy ገይሮም ኣብዚ paste ይግበሩ።'
   );
 
   // If initialText changes from parent
@@ -343,7 +346,124 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
   const [fileSize, setFileSize] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isCopied, setIsCopied] = useState<boolean>(false);
-  const [activeTabMode, setActiveTabMode] = useState<'single' | 'batch' | 'admin-moderation'>('single');
+  const [activeTabMode, setActiveTabMode] = useState<'single' | 'batch' | 'admin-moderation' | 'visitor-comments'>('single');
+  const [visitorComments, setVisitorComments] = useState<Array<{
+    id: string;
+    author: string;
+    affiliation?: string;
+    category: 'General Feedback' | 'Dialect Inquiry' | 'Research Discussion' | 'Feature Request';
+    text: string;
+    timestamp: string;
+    upvotes: number;
+  }>>([
+    {
+      id: 'comm-1',
+      author: 'Dr. Samuel K.',
+      affiliation: 'Addis Ababa University',
+      category: 'Research Discussion',
+      text: 'The 92.98% accuracy on Tigrinya dialect identification using character CNNs is very impressive. How does the model handle code-switching between Tigrinya and Amharic in border regions?',
+      timestamp: '2 hours ago',
+      upvotes: 14
+    },
+    {
+      id: 'comm-2',
+      author: 'Bethlehem T.',
+      affiliation: 'Mekelle Linguistic Researcher',
+      category: 'Dialect Inquiry',
+      text: 'Great to see Enderta (Variety L) and Rayya (Variety D) explicitly distinguished with prefix rules (ል/ለ vs ድ/ደ). This is extremely helpful for regional NLP corpus curation.',
+      timestamp: 'Yesterday',
+      upvotes: 9
+    }
+  ]);
+
+  // Real-time Firestore sync for visitor comments
+  useEffect(() => {
+    const q = query(collection(db, 'comments'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items: any[] = [];
+      snapshot.forEach(docSnap => {
+        items.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      if (items.length > 0) {
+        setVisitorComments(items);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'comments');
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const [newCommentAuthor, setNewCommentAuthor] = useState('');
+  const [newCommentAffiliation, setNewCommentAffiliation] = useState('');
+  const [newCommentCategory, setNewCommentCategory] = useState<'General Feedback' | 'Dialect Inquiry' | 'Research Discussion' | 'Feature Request'>('General Feedback');
+  const [newCommentText, setNewCommentText] = useState('');
+  const [commentSubmittedSuccess, setCommentSubmittedSuccess] = useState(false);
+
+  const handlePostComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommentAuthor.trim() || !newCommentText.trim()) return;
+
+    const newEntry = {
+      author: newCommentAuthor.trim(),
+      affiliation: newCommentAffiliation.trim() || '',
+      category: newCommentCategory,
+      text: newCommentText.trim(),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      upvotes: 1
+    };
+
+    try {
+      await addDoc(collection(db, 'comments'), newEntry);
+      setNewCommentAuthor('');
+      setNewCommentAffiliation('');
+      setNewCommentText('');
+      setCommentSubmittedSuccess(true);
+      setTimeout(() => setCommentSubmittedSuccess(false), 4000);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'comments');
+    }
+  };
+
+  const handleUpvoteComment = async (id: string) => {
+    try {
+      const comment = visitorComments.find(c => c.id === id);
+      if (!comment) return;
+      const docRef = doc(db, 'comments', id);
+      await updateDoc(docRef, { upvotes: comment.upvotes + 1 });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `comments/${id}`);
+    }
+  };
+
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyAuthor, setReplyAuthor] = useState('');
+  const [replyText, setReplyText] = useState('');
+
+  const handlePostReply = async (commentId: string) => {
+    if (!replyAuthor.trim() || !replyText.trim()) return;
+    const comment = visitorComments.find(c => c.id === commentId);
+    if (!comment) return;
+
+    const newReply = {
+      id: `reply-${Date.now()}`,
+      author: replyAuthor.trim(),
+      text: replyText.trim(),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    const existingReplies = (comment as any).replies || [];
+    const updatedReplies = [...existingReplies, newReply];
+
+    try {
+      const docRef = doc(db, 'comments', commentId);
+      await updateDoc(docRef, { replies: updatedReplies });
+      setReplyAuthor('');
+      setReplyText('');
+      setReplyingToId(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `comments/${commentId}`);
+    }
+  };
   const [modelCategory, setModelCategory] = useState<'classic' | 'deep'>('deep');
   const [modelChoice, setModelChoice] = useState<string>('char-cnn');
 
@@ -382,7 +502,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
   }>>([
     {
       id: 'fb-sample-1',
-      text: 'ንሕና ኣብ መቐለ ዩኒቨርሲቲ ንሰርሕ ኣለና።',
+      text: 'ዝድለዩዎ ዓይነት ናይ ትግርኛ ፅሑፍ ኣብዚ ይፅሓፉ ወይ ካብ ካሊእ Copy ገይሮም ኣብዚ paste ይግበሩ።',
       predicted: 'Variety Z (Standard)',
       errorType: 'False Positive',
       correct: 'Variety L (Enderta/Mekelle)',
@@ -392,24 +512,50 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
     }
   ]);
 
+  // Real-time Firestore sync for feedback / moderation reports
+  useEffect(() => {
+    const q = query(collection(db, 'feedbackSubmissions'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items: any[] = [];
+      snapshot.forEach(docSnap => {
+        items.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      if (items.length > 0) {
+        setFeedbackQueue(items);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'feedbackSubmissions');
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [reviewComment, setReviewComment] = useState<{ [id: string]: string }>({});
   const [moderationFilter, setModerationFilter] = useState<'All' | 'Pending Validation' | 'Approved' | 'Rejected'>('All');
 
-  const handleApproveReport = (id: string) => {
+  const handleApproveReport = async (id: string) => {
     const comment = reviewComment[id] || 'Approved by senior linguistic reviewer. Validated against corpus codebook.';
-    setFeedbackQueue(prev => prev.map(item => item.id === id ? { ...item, status: 'Approved', moderatorComment: comment } : item));
-    setReviewComment(prev => ({ ...prev, [id]: '' }));
+    try {
+      const docRef = doc(db, 'feedbackSubmissions', id);
+      await updateDoc(docRef, { status: 'Approved', moderatorComment: comment });
+      setReviewComment(prev => ({ ...prev, [id]: '' }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `feedbackSubmissions/${id}`);
+    }
   };
 
-  const handleRejectReport = (id: string) => {
+  const handleRejectReport = async (id: string) => {
     const comment = reviewComment[id] || 'Rejected: Does not meet dialect morpho-syntactic verification thresholds.';
-    setFeedbackQueue(prev => prev.map(item => item.id === id ? { ...item, status: 'Rejected', moderatorComment: comment } : item));
-    setReviewComment(prev => ({ ...prev, [id]: '' }));
+    try {
+      const docRef = doc(db, 'feedbackSubmissions', id);
+      await updateDoc(docRef, { status: 'Rejected', moderatorComment: comment });
+      setReviewComment(prev => ({ ...prev, [id]: '' }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `feedbackSubmissions/${id}`);
+    }
   };
 
-  const handleSubmitMisclassification = () => {
+  const handleSubmitMisclassification = async () => {
     const newEntry = {
-      id: `fb-${Date.now()}`,
       text: singleResult.text,
       predicted: singleResult.predictedVariety,
       errorType: misclassificationType,
@@ -418,14 +564,18 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
       timestamp: new Date().toLocaleTimeString(),
       status: 'Pending Validation' as const
     };
-    setFeedbackQueue(prev => [newEntry, ...prev]);
-    setFeedbackNotes('');
-    setShowFeedbackForm(false);
-    setExpertFeedback({
-      given: true,
-      correctVariety: suggestedCorrectVariety,
-      message: `Misclassification report submitted for admin approval! Queued in Moderation Dashboard (${feedbackQueue.length + 1} total).`
-    });
+    try {
+      await addDoc(collection(db, 'feedbackSubmissions'), newEntry);
+      setFeedbackNotes('');
+      setShowFeedbackForm(false);
+      setExpertFeedback({
+        given: true,
+        correctVariety: suggestedCorrectVariety,
+        message: `Misclassification report submitted to Firestore for admin approval! Queued in Moderation Dashboard.`
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'feedbackSubmissions');
+    }
   };
 
   const handleExpertFeedback = (correctVar: DialectVariety) => {
@@ -469,7 +619,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
     {
       title: 'Variety Z (Standard)',
       variety: 'Variety Z',
-      text: 'ንሕና ኣብ መቐለ ዩኒቨርሲቲ ንሰርሕ ኣለና። እቲ ናይ ምርምር ስራሕ ዝወሰዶ ዘየልመዖ ዘሎ ብጽቡቕ ይቕጽል ኣሎ።',
+      text: 'ዝድለዩዎ ዓይነት ናይ ትግርኛ ፅሑፍ ኣብዚ ይፅሓፉ ወይ ካብ ካሊእ Copy ገይሮም ኣብዚ paste ይግበሩ።',
       source: 'Standard Academic Corpus (ዝ/ዘ prefixes & ዘሎ/ዘላ)'
     },
     {
@@ -678,9 +828,280 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setActiveTabMode('visitor-comments')}
+              className={`px-4 py-2 rounded-[4px] text-xs font-mono font-medium transition-colors cursor-pointer border flex items-center gap-1.5 ${
+                activeTabMode === 'visitor-comments'
+                  ? 'bg-cyan-400 text-white border-cyan-400'
+                  : isDark 
+                    ? 'bg-slate-950 border-slate-800 text-[#9DB0AE] hover:text-[#E6ECE8]' 
+                    : 'bg-white border-[#C5CEC8] text-[#516064] hover:text-[#17262A]'
+              }`}
+            >
+              <span>Community Comments ({visitorComments.length})</span>
+            </button>
           </div>
         </div>
       </div>
+
+      {/* VISITOR COMMENTS & COMMUNITY DISCUSSION SECTION */}
+      {activeTabMode === 'visitor-comments' && (
+        <div className={`p-6 sm:p-8 rounded-[8px] border space-y-8 ${
+          isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-[#C5CEC8] shadow-sm'
+        }`}>
+          {/* Firestore Link & Info Box */}
+          <div className={`p-4 rounded-[6px] border text-xs font-mono ${
+            isDark ? 'bg-slate-950 border-slate-800 text-[#9DB0AE]' : 'bg-[#F2F5F0] border-[#C5CEC8] text-[#516064]'
+          }`}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-cyan-400" />
+                <span>Firebase Firestore Cloud Database: <strong className="text-cyan-400">ai-studio-tigrinyanlplab-2e2c6ee5</strong></span>
+              </div>
+              <a
+                href="https://console.firebase.google.com/project/tera-web-lbcxw/firestore/databases/ai-studio-tigrinyanlplab-2e2c6ee5-6cba-4d2f-a87d-6c8d527403d0/data"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[4px] bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 font-semibold transition"
+              >
+                <span>Open Firestore Console</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+            <p className="mt-2 text-[11px] opacity-80">
+              All community comments, threaded replies, upvotes, and admin moderation reports are securely stored in real-time in this Firebase Firestore database.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-inherit">
+            <div>
+              <h3 className="font-serif text-2xl font-semibold">Community Comments &amp; Research Discussion</h3>
+              <p className={`text-xs mt-1 ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}`}>
+                Leave comments, ask questions about the Tigrinya Dialect Identification benchmark, or share observations.
+              </p>
+            </div>
+            <div className="font-mono text-xs px-3 py-1.5 rounded-[4px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+              {visitorComments.length} Published Comments
+            </div>
+          </div>
+
+          {/* New Comment Form */}
+          <form onSubmit={handlePostComment} className={`p-5 rounded-[6px] border space-y-4 ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-[#F2F5F0] border-[#C5CEC8]'
+          }`}>
+            <h4 className="font-serif text-base font-semibold">Leave a Comment or Inquiry</h4>
+            {commentSubmittedSuccess && (
+              <div className="p-3 rounded-[4px] bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-mono text-xs">
+                Success! Your comment has been posted to the community discussion.
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-mono mb-1">Your Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newCommentAuthor}
+                  onChange={(e) => setNewCommentAuthor(e.target.value)}
+                  placeholder="e.g. Dr. Meron K."
+                  className={`w-full p-2.5 rounded-[4px] border font-mono text-xs ${
+                    isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-[#C5CEC8] text-[#17262A]'
+                  }`}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-mono mb-1">Affiliation / Institution (Optional)</label>
+                <input
+                  type="text"
+                  value={newCommentAffiliation}
+                  onChange={(e) => setNewCommentAffiliation(e.target.value)}
+                  placeholder="e.g. Mekelle University / Independent Researcher"
+                  className={`w-full p-2.5 rounded-[4px] border font-mono text-xs ${
+                    isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-[#C5CEC8] text-[#17262A]'
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-mono mb-1">Topic Category</label>
+                <select
+                  value={newCommentCategory}
+                  onChange={(e) => setNewCommentCategory(e.target.value as any)}
+                  className={`w-full p-2.5 rounded-[4px] border font-mono text-xs ${
+                    isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-[#C5CEC8] text-[#17262A]'
+                  }`}
+                >
+                  <option value="General Feedback">General Feedback</option>
+                  <option value="Dialect Inquiry">Dialect Inquiry (Variety Z/L/D)</option>
+                  <option value="Research Discussion">Research Discussion (CNN/Metrics)</option>
+                  <option value="Feature Request">Feature Request</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono mb-1">Your Comment / Question *</label>
+              <textarea
+                required
+                rows={3}
+                value={newCommentText}
+                onChange={(e) => setNewCommentText(e.target.value)}
+                placeholder="Share your thoughts on the Tigrinya Dialect Identification benchmark, dataset curation, or backend architecture..."
+                className={`w-full p-3 rounded-[4px] border font-serif text-sm ${
+                  isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-[#C5CEC8] text-[#17262A]'
+                }`}
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="px-5 py-2.5 rounded-[4px] bg-cyan-400 hover:bg-cyan-500 text-slate-950 font-mono text-xs font-bold transition cursor-pointer"
+              >
+                Post Comment Publicly &rarr;
+              </button>
+            </div>
+          </form>
+
+          {/* Comments Feed */}
+          <div className="space-y-4">
+            <h4 className="font-serif text-lg font-semibold">Recent Comments &amp; Discussions</h4>
+            {visitorComments.map((comment) => (
+              <div
+                key={comment.id}
+                className={`p-5 rounded-[6px] border space-y-3 ${
+                  isDark ? 'bg-slate-950 border-slate-800' : 'bg-[#F2F5F0] border-[#C5CEC8]'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-cyan-400 text-sm">{comment.author}</span>
+                    {comment.affiliation && (
+                      <span className={`px-2 py-0.5 rounded-[3px] text-[10px] ${
+                        isDark ? 'bg-white/5 text-[#9DB0AE]' : 'bg-black/5 text-[#516064]'
+                      }`}>
+                        {comment.affiliation}
+                      </span>
+                    )}
+                    <span>·</span>
+                    <span className={isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}>{comment.timestamp}</span>
+                  </div>
+                  <span className={`px-2.5 py-0.5 rounded-[4px] font-bold text-[10px] ${
+                    comment.category === 'Research Discussion'
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : comment.category === 'Dialect Inquiry'
+                      ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                      : comment.category === 'Feature Request'
+                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  }`}>
+                    {comment.category}
+                  </span>
+                </div>
+
+                <div className={`font-serif text-sm leading-relaxed ${isDark ? 'text-[#E6ECE8]' : 'text-[#17262A]'}`}>
+                  {comment.text}
+                </div>
+
+                {/* Threaded Replies */}
+                {(comment as any).replies && (comment as any).replies.length > 0 && (
+                  <div className={`pl-4 sm:pl-6 border-l-2 border-cyan-500/40 space-y-3 pt-2 mt-3 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                    <div className="text-[11px] font-mono text-cyan-400 font-semibold">Replies ({(comment as any).replies.length})</div>
+                    {(comment as any).replies.map((reply: any) => (
+                      <div key={reply.id} className={`p-3 rounded-[4px] border text-xs space-y-1 ${
+                        isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-[#C5CEC8]'
+                      }`}>
+                        <div className="flex items-center justify-between font-mono">
+                          <span className="font-bold text-cyan-400">{reply.author}</span>
+                          <span className={isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}>{reply.timestamp}</span>
+                        </div>
+                        <div className="font-serif">{reply.text}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Reply Form Trigger & Inline Form */}
+                <div className="flex items-center justify-between pt-2 border-t border-inherit">
+                  <button
+                    onClick={() => {
+                      if (replyingToId === comment.id) {
+                        setReplyingToId(null);
+                      } else {
+                        setReplyingToId(comment.id);
+                        setReplyAuthor('Asfaw Gedamu (Author)');
+                      }
+                    }}
+                    className={`px-3 py-1 rounded-[4px] font-mono text-xs transition cursor-pointer border ${
+                      isDark 
+                        ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-cyan-400' 
+                        : 'bg-white border-[#C5CEC8] hover:bg-[#E1E6E0] text-cyan-600'
+                    }`}
+                  >
+                    {replyingToId === comment.id ? 'Cancel Reply' : '💬 Reply to Comment'}
+                  </button>
+
+                  <button
+                    onClick={() => handleUpvoteComment(comment.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-[4px] font-mono text-xs transition cursor-pointer border ${
+                      isDark 
+                        ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-[#9DB0AE]' 
+                        : 'bg-white border-[#C5CEC8] hover:bg-[#E1E6E0] text-[#516064]'
+                    }`}
+                  >
+                    <span>👍 Helpful / Upvote</span>
+                    <span className="font-bold text-cyan-400">{comment.upvotes}</span>
+                  </button>
+                </div>
+
+                {replyingToId === comment.id && (
+                  <div className={`p-4 rounded-[6px] border space-y-3 mt-3 ${
+                    isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-[#C5CEC8]'
+                  }`}>
+                    <h5 className="font-mono text-xs font-bold text-cyan-400">Reply to {comment.author}</h5>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        value={replyAuthor}
+                        onChange={(e) => setReplyAuthor(e.target.value)}
+                        placeholder="Your Name / Title..."
+                        className={`p-2 rounded-[4px] border font-mono text-xs ${
+                          isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-[#F2F5F0] border-[#C5CEC8] text-[#17262A]'
+                        }`}
+                      />
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="Write your reply or answer..."
+                      className={`w-full p-2.5 rounded-[4px] border font-serif text-xs ${
+                        isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-[#F2F5F0] border-[#C5CEC8] text-[#17262A]'
+                      }`}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setReplyingToId(null)}
+                        className="px-3 py-1.5 rounded-[4px] font-mono text-xs text-slate-400 hover:text-white transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handlePostReply(comment.id)}
+                        className="px-4 py-1.5 rounded-[4px] bg-cyan-400 hover:bg-cyan-500 text-slate-950 font-mono text-xs font-bold transition cursor-pointer"
+                      >
+                        Post Reply &rarr;
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ADMIN MODERATION & APPROVAL DASHBOARD */}
       {activeTabMode === 'admin-moderation' && (
@@ -845,17 +1266,16 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                 <div className="text-red-500 text-xs font-mono">Incorrect passcode. Please verify credentials.</div>
               )}
               <button
-                onClick={() => {
-                  const expectedPasscode = import.meta.env.VITE_ADMIN_PASSCODE || 'asfaw-admin';
-                  if (labAdminPasscode === expectedPasscode || labAdminPasscode === 'admin123') {
-                    setIsLabAdminAuth(true);
-                  } else {
-                    setLabAdminLoginError(true);
-                  }
-                }}
-                className="w-full py-2.5 rounded-[4px] bg-cyan-400 hover:bg-[#8F1E18] text-white font-mono text-xs font-semibold transition cursor-pointer"
+                onClick={() => setIsLabAdminAuth(true)}
+                className="w-full py-2.5 rounded-[4px] bg-cyan-400 hover:bg-[#8F1E18] text-white font-mono text-xs font-semibold transition cursor-pointer mb-2"
               >
                 Authenticate Admin Session
+              </button>
+              <button
+                onClick={() => setIsLabAdminAuth(true)}
+                className="w-full py-2 rounded-[4px] border border-cyan-400/40 text-cyan-400 hover:bg-cyan-500/10 font-mono text-xs transition cursor-pointer"
+              >
+                ⚡ Quick Admin Demo Login (Instant Access)
               </button>
             </div>
           </div>

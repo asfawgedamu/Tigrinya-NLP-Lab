@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { Menu, X, Moon, Sun } from 'lucide-react';
+import { Menu, X, Moon, Sun, Download } from 'lucide-react';
 
 export type ActiveTab = 'home' | 'projects' | 'resume' | 'code' | 'contact';
 
@@ -70,6 +70,21 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 );
               })}
             </nav>
+
+            {/* Download Clean Source Zip */}
+            <a
+              href="/tigrinya-nlp-lab-clean-source.zip"
+              download="tigrinya-nlp-lab-clean-source.zip"
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-[6px] border text-xs font-mono font-semibold transition cursor-pointer ${
+                isDark 
+                  ? 'border-slate-800 text-cyan-400 bg-slate-900/60 hover:bg-slate-900' 
+                  : 'border-[#C5CEC8] text-cyan-700 bg-[#F2F5F0] hover:bg-[#E1E6E0]'
+              }`}
+              title="Download clean source code zip (excluding archives and AI Studio exports)"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download .zip</span>
+            </a>
 
             {/* Dark/Light Theme Toggle */}
             <button

@@ -74,7 +74,7 @@ export interface DialectSample {
 export const SAMPLE_SENTENCES: DialectSample[] = [
   {
     id: 's1',
-    text: 'ንሕና ኣብ መቐለ ዩኒቨርሲቲ ንሰርሕ ኣለና። እቲ ናይ ምርምር ስራሕ ብጽቡቕ ይቕጽል ኣሎ።',
+    text: 'ዝድለዩዎ ዓይነት ናይ ትግርኛ ፅሑፍ ኣብዚ ይፅሓፉ ወይ ካብ ካሊእ Copy ገይሮም ኣብዚ paste ይግበሩ።',
     translation: 'We are working at Mekelle University. The research project is progressing well.',
     source: 'Kilte Zantatat & Academic Corpus',
     variety: 'Variety Z',
