@@ -352,6 +352,41 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
   const [modelCategory, setModelCategory] = useState<'classic' | 'deep'>('deep');
   const [modelChoice, setModelChoice] = useState<string>('char-cnn');
 
+  // Auto-load corpus rows and batch results from attached TSV on mount
+  useEffect(() => {
+    fetch('/assets/aistudio/all_source1_006d0c4f.tsv')
+      .then(res => res.text())
+      .then(text => {
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length > 1) {
+          const dataRows = lines.slice(1);
+          const parsedRows: CorpusRow[] = [];
+          const results: InferenceResult[] = [];
+
+          for (let i = 0; i < dataRows.length && i < 8; i++) {
+            const cols = dataRows[i].split('\t');
+            if (cols.length >= 3) {
+              const [zText, lText, dText] = cols;
+              parsedRows.push({ z: zText || '', l: lText || '', d: dText || '' });
+              if (zText) results.push(runMockInference(zText, `tsv-z-${i + 1}`, modelChoice));
+              if (lText) results.push(runMockInference(lText, `tsv-l-${i + 1}`, modelChoice));
+              if (dText) results.push(runMockInference(dText, `tsv-d-${i + 1}`, modelChoice));
+            }
+          }
+
+          if (parsedRows.length > 0) {
+            setCorpusRows(parsedRows);
+            setBatchResults(results);
+            setFileName('all_source1.tsv (Attached Comparative Corpus — Z, L, D Varieties)');
+            setFileSize(`${(text.length / 1024).toFixed(1)} KB`);
+          }
+        }
+      })
+      .catch(err => {
+        console.error('Error loading attached corpus TSV:', err);
+      });
+  }, []);
+
   // Re-run inference immediately when modelChoice changes
   React.useEffect(() => {
     if (inputText.trim()) {
@@ -436,7 +471,13 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
   const [showResults, setShowResults] = useState<boolean>(false);
   const [resultsExpanded, setResultsExpanded] = useState<boolean>(true);
 
-  // Batch results
+  // Batch results & comparative corpus rows
+  interface CorpusRow {
+    z: string;
+    l: string;
+    d: string;
+  }
+  const [corpusRows, setCorpusRows] = useState<CorpusRow[]>([]);
   const [batchResults, setBatchResults] = useState<InferenceResult[]>([]);
   const [batchFilter, setBatchFilter] = useState<'all' | DialectVariety>('all');
 
@@ -1344,7 +1385,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -1354,11 +1395,23 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-[4px] bg-cyan-400 text-white font-mono text-xs font-medium transition cursor-pointer hover:bg-[#8F1E18]"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-[4px] bg-cyan-400 text-white font-mono text-xs font-medium transition cursor-pointer hover:bg-cyan-500"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   <span>Choose File (.txt, .csv, .tsv)</span>
                 </button>
+                <a
+                  href="/assets/aistudio/all_source1_006d0c4f.tsv"
+                  download="tigrinya_dialect_corpus_all_source1.tsv"
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-[4px] border font-mono text-xs font-medium transition cursor-pointer ${
+                    isDark 
+                      ? 'border-slate-800 bg-slate-900 text-cyan-400 hover:bg-slate-800' 
+                      : 'border-[#C5CEC8] bg-white text-cyan-600 hover:bg-[#E1E6E0]'
+                  }`}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Whole Corpus TSV</span>
+                </a>
               </div>
             </div>
 
@@ -1377,6 +1430,64 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
               </div>
             )}
           </div>
+
+          {/* Comparative Corpus Table (Z-Variety, L-Variety, D-Variety) in clean modern React table format */}
+          {corpusRows.length > 0 && (
+            <div className={`rounded-xl border overflow-hidden shadow-xs ${
+              isDark ? 'border-slate-800 bg-slate-900/90' : 'border-slate-200 bg-white'
+            }`}>
+              <div className="p-5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/80 dark:bg-slate-900/50">
+                <div>
+                  <h4 className="font-serif font-semibold text-base">Comparative Dialect Corpus View</h4>
+                  <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Parallel sentence alignment across Standard (Z), Enderta/Mekelle (L), and Rayya (D) varieties from `all_source1.tsv`
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
+                    {corpusRows.length} Parallel Rows
+                  </span>
+                </div>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className={`border-b text-xs font-semibold uppercase tracking-wider ${
+                    isDark ? 'border-slate-800 bg-slate-950/60 text-slate-400' : 'border-slate-200 bg-slate-100/70 text-slate-600'
+                  }`}>
+                    <tr>
+                      <th className="py-3.5 px-5 w-1/3">Z-Variety (Standard)</th>
+                      <th className="py-3.5 px-5 w-1/3">L-Variety (Enderta)</th>
+                      <th className="py-3.5 px-5 w-1/3">D-Variety (Rayya)</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`divide-y ${isDark ? 'divide-slate-800/60 text-slate-200' : 'divide-slate-200 text-slate-800'}`}>
+                    {corpusRows.map((row, idx) => (
+                      <tr 
+                        key={idx} 
+                        className={`transition-colors ${
+                          isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50/80'
+                        }`}
+                      >
+                        <td className="py-4 px-5 align-top font-serif leading-relaxed">
+                          <div className="text-[11px] uppercase tracking-wider font-sans font-semibold mb-1 text-cyan-500">Variety Z</div>
+                          <div className="text-sm">{row.z}</div>
+                        </td>
+                        <td className="py-4 px-5 align-top font-serif leading-relaxed">
+                          <div className="text-[11px] uppercase tracking-wider font-sans font-semibold mb-1 text-amber-500">Variety L</div>
+                          <div className="text-sm">{row.l}</div>
+                        </td>
+                        <td className="py-4 px-5 align-top font-serif leading-relaxed">
+                          <div className="text-[11px] uppercase tracking-wider font-sans font-semibold mb-1 text-blue-500">Variety D</div>
+                          <div className="text-sm">{row.d}</div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Batch Summary Stats */}
           {batchStats && (
