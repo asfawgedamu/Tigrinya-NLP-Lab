@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://asfawgedamu.github.io/sitemap.xml

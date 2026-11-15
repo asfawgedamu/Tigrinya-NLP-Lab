@@ -1,55 +1,84 @@
 rules_version = '2';
+
+// Replace the address below with the Google account you use to sign in as author/admin.
+// Only that verified account can moderate reports, reply as "Author", and delete content.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'REPLACE_WITH_YOUR_GOOGLE_EMAIL@gmail.com';
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
+    function isText(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
 
-    function isValidComment(data) {
-      return data.keys().hasAll(['author', 'category', 'text', 'timestamp', 'upvotes'])
-        && data.keys().hasOnly(['author', 'affiliation', 'category', 'text', 'timestamp', 'upvotes', 'replies'])
-        && data.author is string && data.author.size() > 0 && data.author.size() <= 100
-        && (!data.keys().has('affiliation') || (data.affiliation is string && data.affiliation.size() <= 150))
-        && data.category is string && data.category in ['General Feedback', 'Dialect Inquiry', 'Research Discussion', 'Feature Request']
-        && data.text is string && data.text.size() > 0 && data.text.size() <= 2000
-        && data.timestamp is string
-        && data.upvotes is int
-        && (!data.keys().has('replies') || data.replies is list);
-    }
-
-    function isValidFeedback(data) {
-      return data.keys().hasAll(['text', 'predicted', 'correct', 'status', 'timestamp'])
-        && data.keys().hasOnly(['text', 'predicted', 'errorType', 'correct', 'notes', 'timestamp', 'status', 'moderatorComment'])
-        && data.text is string && data.text.size() > 0 && data.text.size() <= 2000
-        && data.predicted is string
-        && (!data.keys().has('errorType') || data.errorType is string)
-        && data.correct is string
-        && (!data.keys().has('notes') || (data.notes is string && data.notes.size() <= 1000))
-        && data.timestamp is string
-        && data.status is string && data.status in ['Pending Validation', 'Approved', 'Rejected']
-        && (!data.keys().has('moderatorComment') || data.moderatorComment is string);
+    // ---- Comments: anyone reads and posts; anyone can add exactly one upvote; admin deletes ----
+    function validComment(d) {
+      return d.keys().hasAll(['author', 'category', 'text', 'upvotes', 'createdAt'])
+        && d.keys().hasOnly(['author', 'affiliation', 'category', 'text', 'upvotes', 'createdAt'])
+        && isText(d.author, 100)
+        && (!('affiliation' in d) || (d.affiliation is string && d.affiliation.size() <= 150))
+        && d.category in ['General Feedback', 'Dialect Inquiry', 'Research Discussion', 'Feature Request']
+        && isText(d.text, 2000)
+        && d.upvotes is int
+        && d.createdAt == request.time;
     }
 
     match /comments/{commentId} {
       allow read: if true;
-      allow create: if isValidId(commentId) && isValidComment(request.resource.data);
-      allow update: if isValidId(commentId) && (
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes']) && request.resource.data.upvotes == resource.data.upvotes + 1) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replies']) && request.resource.data.replies is list) ||
-        isValidComment(request.resource.data)
-      );
-      allow delete: if false;
+      // Visitors must start at 0 upvotes; the admin may publish featured comments with a starting count.
+      allow create: if (validComment(request.resource.data) && request.resource.data.upvotes == 0) || isAdmin();
+      allow update: if (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes'])
+          && request.resource.data.upvotes == resource.data.upvotes + 1
+        ) || isAdmin();
+      allow delete: if isAdmin();
     }
 
-    match /feedbackSubmissions/{submissionId} {
+    // ---- Replies: anyone can reply; only the admin can post as the Author ----
+    function validReply(d) {
+      return d.keys().hasOnly(['commentId', 'author', 'text', 'isOwner', 'createdAt'])
+        && d.keys().hasAll(['commentId', 'author', 'text', 'isOwner', 'createdAt'])
+        && isText(d.commentId, 128)
+        && isText(d.author, 100)
+        && isText(d.text, 2000)
+        && d.isOwner is bool
+        && (d.isOwner == false || isAdmin())
+        && d.createdAt == request.time
+        && exists(/databases/$(database)/documents/comments/$(d.commentId));
+    }
+
+    match /replies/{replyId} {
       allow read: if true;
-      allow create: if isValidId(submissionId) && isValidFeedback(request.resource.data);
-      allow update: if isValidId(submissionId) && isValidFeedback(request.resource.data);
-      allow delete: if false;
+      allow create: if validReply(request.resource.data);
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // ---- Misclassification reports: anyone can submit; only the admin can read and review ----
+    function validReport(d) {
+      return d.keys().hasAll(['text', 'predicted', 'correct', 'status', 'timestamp', 'createdAt'])
+        && d.keys().hasOnly(['text', 'predicted', 'errorType', 'correct', 'notes', 'timestamp', 'createdAt', 'status'])
+        && isText(d.text, 2000)
+        && d.predicted is string && d.predicted.size() <= 100
+        && d.correct is string && d.correct.size() <= 100
+        && (!('errorType' in d) || (d.errorType is string && d.errorType.size() <= 100))
+        && (!('notes' in d) || (d.notes is string && d.notes.size() <= 1000))
+        && d.timestamp is string && d.timestamp.size() <= 100
+        && d.status == 'Pending Validation'
+        && d.createdAt == request.time;
+    }
+
+    match /feedbackSubmissions/{reportId} {
+      allow read: if isAdmin();
+      allow create: if validReport(request.resource.data);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'moderatorComment'])
+        && request.resource.data.status in ['Approved', 'Rejected']
+        && (!('moderatorComment' in request.resource.data)
+            || (request.resource.data.moderatorComment is string && request.resource.data.moderatorComment.size() <= 1000));
+      allow delete: if isAdmin();
     }
   }
 }

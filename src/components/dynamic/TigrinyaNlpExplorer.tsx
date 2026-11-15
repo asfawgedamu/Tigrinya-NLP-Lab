@@ -1053,7 +1053,7 @@ export const TigrinyaNlpExplorer: React.FC = () => {
             </span>
             <div className="max-w-xl w-full bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex items-center justify-center">
               <img
-                src="/assets/aistudio/global__000054e2ea70026d_0000015f_2_000054e2ea70026d_0000000000000001__86fd196e3862b43d_0000022a3c1018bc_00065f07fc50671f_08986173.png"
+                src="/assets/img/venn-tigrinya-varieties.png"
                 alt="Venn Diagram of Tigrinya Varieties"
                 className="w-full h-auto object-contain rounded-lg"
               />

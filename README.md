@@ -12,12 +12,13 @@ This enterprise-grade web application and research suite serves as both an advan
 ### Core Modules:
 1. **Tigrinya Dialect Lab (TDI Benchmark):**
    - Interactive inference engine classifying Ethio Telecom / Tigrinya text into three dialect varieties:
-     - **Variety Z (Northern / Standard):** Characterized by `ዝ-/ዘ-` relative prefixes and standard auxiliary verb compounding (`ኣለና`, `ዘሎ`).
+     - **Variety Z (Standard):** Characterized by `ዝ-/ዘ-` relative prefixes and standard auxiliary verb compounding (`ኣለና`, `ዘሎ`).
      - **Variety L (Enderta / Mekelle):** Characterized by `ል-/ለ-` relative prefixes, `[ይ]` word connectors, and `ለሎ/ለላ` existentials.
-     - **Variety D (Rayya):** Characterized by `ድ-/ደ-` alveolar stop prefix shifts and Rayyan existential markers (`ድንሆ`).
+     - **Variety D (Rayya):** Characterized by `ድ-/ደ-` prefixes and Rayya existential markers (`ድንሆ`).
    - **Strict Non-Tigrinya & Amharic Text Rejection:** Automatically detects and refuses non-Tigrinya, English, or Amharic text inputs (e.g., stopping Amharic copular texts from false-positive classification).
    - **Multi-Model Pipeline Switcher:** Instantly switch between Classical ML (Naive Bayes, SVM, ANN) and Deep Learning architectures (Character CNN, BiLSTM, CNN-BiLSTM, Afro-XLMR Transformer) with live recalculation of confidence scores and probability distributions.
-   - **Active Learning & Secure Admin Moderation:** Expert misclassification reporting queue with secure password-protected admin dashboard (`asfaw-admin`) to review, comment on, and approve or reject submissions before retraining buffer ingestion.
+   - **Active Learning & Admin Moderation:** Visitors send misclassification reports; only the site owner, signed in with Google, can review, approve or reject them (enforced by Firestore rules).
+   - **Community Comments & Replies:** Anyone can comment, reply and upvote. The owner replies as "Author" after signing in.
    - **Batch Corpus File Upload & CSV Export:** Upload `.txt` or `.csv` corpora for batch dialect prediction and export results as CSV.
 
 2. **Professional Portfolio & Multi-Page Viewer:**
@@ -38,8 +39,9 @@ This enterprise-grade web application and research suite serves as both an advan
 
 ### Key Dependencies (`package.json`):
 - `react`, `react-dom` (^19.0.0)
-- `lucide-react` (^1.16.0)
-- `recharts` (^2.15.0)
+- `firebase` (Firestore + Google sign-in for comments and moderation)
+- `lucide-react`
+- `recharts`
 - `canvas-confetti` (^1.9.4)
 - `tailwindcss` (^4.0.0)
 - `vite`, `typescript`
@@ -54,8 +56,8 @@ Ensure you have **Node.js (v18+ or v20+)** installed on your system.
 ### Quick Start
 1. Clone the repository:
    ```bash
-   git clone https://github.com/asfawgedamu/asfawgedamu.github.io.git
-   cd asfawgedamu.github.io
+   git clone https://github.com/asfawgedamu/Tigrinya-NLP-Lab.git
+   cd Tigrinya-NLP-Lab
    ```
 
 2. Install dependencies:
@@ -81,25 +83,46 @@ npm run build
 
 ---
 
-## Project Structure & Code Comments
+## Comments, Replies and Admin Setup (Firebase)
 
-All scripts (`.ts`, `.tsx`, `.html`, `.css`) contain comprehensive JSDoc and inline comments detailing function logic, morpho-syntactic rules, and component architecture:
+Comments, replies and misclassification reports are stored in Cloud Firestore. The owner signs in with Google; there are no shared passcodes in the code.
+
+1. **Publish the rules.** Open `firestore.rules`, replace `REPLACE_WITH_YOUR_GOOGLE_EMAIL@gmail.com` with your Google address, then publish them:
+   - Console: Firestore Database → the named database → Rules → paste → Publish, **or**
+   - CLI: `npx firebase-tools deploy --only firestore:rules --project tera-web-lbcxw`
+2. **Enable Google sign-in.** Firebase Console → Authentication → Sign-in method → Google → Enable.
+3. **Authorize your site address.** Authentication → Settings → Authorized domains → add the domain the site runs on (for example `asfawgedamu.github.io`).
+4. **Publish the two featured comments (once).** Open the site, go to Projects → Community Comments, click **Author sign-in**, then **Publish the two featured comments** if the list is empty.
+
+Who can do what:
+
+| Action | Visitor | Owner (signed in) |
+| --- | --- | --- |
+| Read comments and replies | Yes | Yes |
+| Post a comment, reply or upvote | Yes | Yes |
+| Reply labelled "Author" | No | Yes |
+| Delete a comment or reply | No | Yes |
+| Submit a misclassification report | Yes | Yes |
+| Read, approve or reject reports | No | Yes |
+
+---
+
+## Project Structure
 
 ```text
 /
-├── public/                 # Static multi-page portfolio assets (cv.html, resume.html, work.html, code.html, contact.html)
+├── public/                 # Static assets: research corpora (research/), images (assets/img), legacy static pages
 ├── src/
-│   ├── components/         # Modular React components (Navbar, Footer, HeroSection, AdminDashboard, TigrinyaDialectLab...)
-│   │   └── dynamic/        # Interactive portfolio tabs (InteractiveResume, InteractiveContact, DatabaseConsole...)
-│   ├── context/            # Theme context (Dark / Light mode toggle with text contrast preservation)
-│   ├── data/               # Benchmark datasets, Fidel alphabet matrix, and user profile data (nlpData.ts, portfolioData.ts)
-│   ├── utils/              # Markdown and multi-page file generators
-│   ├── App.tsx             # Root application orchestrator with tab routing
-│   ├── main.tsx            # Application entry point
-│   └── index.css           # Global Tailwind CSS import and theme styling
-├── package.json            # Available dependencies and npm scripts
-├── tsconfig.json           # TypeScript compilation configuration
-└── vite.config.ts          # Vite dev server configuration (port 3000)
+│   ├── components/         # Navbar, Footer, ProjectsPage, TigrinyaDialectLab, CommentsPanel, ModerationPanel
+│   │   └── dynamic/        # Resume, contact, GitHub explorer, Tigrinya NLP explorer, research data portal
+│   ├── context/            # ThemeContext (dark/light) and AdminContext (Google sign-in + admin check)
+│   ├── data/               # Corpora, stop words and profile data
+│   ├── lib/                # Firebase setup, comments service, moderation service
+│   ├── App.tsx             # Tab routing with lazy-loaded pages
+│   └── main.tsx            # Entry point
+├── firestore.rules         # Database security rules (publish these)
+├── firebase.json           # Firebase CLI config for the rules
+└── vite.config.ts
 ```
 
 ---
@@ -109,7 +132,7 @@ All scripts (`.ts`, `.tsx`, `.html`, `.css`) contain comprehensive JSDoc and inl
 To keep dependencies working seamlessly and secure:
 - Regularly audit packages: `npm audit`
 - Update packages safely: `npm update`
-- Verify TypeScript types: `npx tsc --noEmit`
+- Verify TypeScript types: `npm run typecheck`
 - Run build verification before pushing: `npm run build`
 
 ---

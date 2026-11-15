@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { Navbar, ActiveTab } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { OverviewHero } from './components/dynamic/OverviewHero';
-import { ProjectsPage } from './components/ProjectsPage';
-import { InteractiveResume } from './components/dynamic/InteractiveResume';
-import { LiveGitHubExplorer } from './components/dynamic/LiveGitHubExplorer';
-import { InteractiveContact } from './components/dynamic/InteractiveContact';
+const ProjectsPage = lazy(() => import('./components/ProjectsPage').then((m) => ({ default: m.ProjectsPage })));
+const InteractiveResume = lazy(() => import('./components/dynamic/InteractiveResume').then((m) => ({ default: m.InteractiveResume })));
+const LiveGitHubExplorer = lazy(() => import('./components/dynamic/LiveGitHubExplorer').then((m) => ({ default: m.LiveGitHubExplorer })));
+const InteractiveContact = lazy(() => import('./components/dynamic/InteractiveContact').then((m) => ({ default: m.InteractiveContact })));
 import { CommandPalette } from './components/dynamic/CommandPalette';
 import { useTheme } from './context/ThemeContext';
 
@@ -64,6 +64,7 @@ export default function App() {
 
       {/* Main Content Router */}
       <main className="flex-1">
+        <Suspense fallback={<div className="p-10 text-center font-mono text-xs opacity-70">Loading…</div>}>
         {activeTab === 'home' && (
           <OverviewHero
             onNavigate={handleNavigate}
@@ -86,6 +87,7 @@ export default function App() {
         {activeTab === 'contact' && (
           <InteractiveContact />
         )}
+        </Suspense>
       </main>
 
       {/* Clean Footer (Hero badges, divider rule, © 2026 Asfaw Gedamu) */}
