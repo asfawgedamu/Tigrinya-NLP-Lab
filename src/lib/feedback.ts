@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
-  addDoc, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, Timestamp, updateDoc,
+  collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, Timestamp, updateDoc, writeBatch, limit,
 } from 'firebase/firestore';
-import { confirmed, db } from './firebase';
+import { cleanText, confirmed, db, ensureVisitor } from './firebase';
 
 export type ReportStatus = 'Pending Validation' | 'Approved' | 'Rejected';
 
@@ -21,17 +21,22 @@ export interface MisclassificationReport {
 
 export async function submitReport(input: {
   text: string; predicted: string; errorType: string; correct: string; notes: string;
-}) {
-  await confirmed(addDoc(collection(db, 'feedbackSubmissions'), {
-    text: input.text.slice(0, 2000),
-    predicted: input.predicted,
-    errorType: input.errorType,
-    correct: input.correct,
-    notes: (input.notes || 'No explanatory notes provided').slice(0, 1000),
-    timestamp: new Date().toLocaleString(),
+}, isAdmin = false) {
+  const user = await ensureVisitor();
+  const batch = writeBatch(db);
+  if (!isAdmin) batch.set(doc(db, 'limits', user.uid), { lastWriteAt: serverTimestamp() });
+  batch.set(doc(collection(db, 'feedbackSubmissions')), {
+    text: cleanText(input.text).slice(0, 2000),
+    predicted: input.predicted.slice(0, 100),
+    errorType: input.errorType.slice(0, 100),
+    correct: input.correct.slice(0, 100),
+    notes: (cleanText(input.notes) || 'No explanatory notes provided').slice(0, 1000),
+    timestamp: new Date().toLocaleString().slice(0, 100),
     createdAt: serverTimestamp(),
+    authorUid: user.uid,
     status: 'Pending Validation',
-  }));
+  });
+  await confirmed(batch.commit());
 }
 
 export async function reviewReport(id: string, status: 'Approved' | 'Rejected', moderatorComment: string) {
@@ -49,7 +54,7 @@ export function useReports(enabled: boolean) {
 
   useEffect(() => {
     if (!enabled) { setReports([]); setError(null); return; }
-    return onSnapshot(query(collection(db, 'feedbackSubmissions')), (snap) => {
+    return onSnapshot(query(collection(db, 'feedbackSubmissions'), limit(500)), (snap) => {
       const items = snap.docs.map((d) => {
         const x = d.data() as Record<string, any>;
         return {

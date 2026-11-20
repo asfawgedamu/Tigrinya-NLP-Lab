@@ -2,5 +2,6 @@
   "firestore": {
     "database": "ai-studio-tigrinyanlplab-2e2c6ee5-6cba-4d2f-a87d-6c8d527403d0",
     "rules": "firestore.rules"
-  }
+  },
+  "emulators": { "firestore": { "host": "127.0.0.1", "port": 8080 }, "ui": { "enabled": false } }
 }

@@ -25,8 +25,9 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (u) => {
+      // Anonymous visitor identities are not admin candidates.
+      if (!u || u.isAnonymous) { setUser(null); setIsAdmin(false); setChecking(false); return; }
       setUser(u);
-      if (!u) { setIsAdmin(false); setChecking(false); return; }
       setChecking(true);
       try {
         // Reports are readable only by the admin account, so a successful read proves admin rights.

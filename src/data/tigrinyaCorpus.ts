@@ -140,7 +140,7 @@ export const RAW_DATASET_ASSETS = [
   {
     id: 'z-variety',
     variety: 'Variety Z',
-    name: 'Ethiopian Tigrinya (Standard / Tigray Central)',
+    name: 'Variety Z (Standard)',
     fileName: 'z-variety_f75533ae.txt',
     filePath: '/research/z-variety_f75533ae.txt',
     fileSize: '79.6 KB',
@@ -152,7 +152,7 @@ export const RAW_DATASET_ASSETS = [
   {
     id: 'l-variety',
     variety: 'Variety L',
-    name: 'Southern & Eastern Tigray Variety (Enderta / Raya / Wejerat)',
+    name: 'Variety L (Enderta/Mekelle)',
     fileName: 'l-variety_520d584e.txt',
     filePath: '/research/l-variety_520d584e.txt',
     fileSize: '78.7 KB',
@@ -164,7 +164,7 @@ export const RAW_DATASET_ASSETS = [
   {
     id: 'd-variety',
     variety: 'Variety D',
-    name: 'Variety D (Colloquial Rayan / Regional Morphological Variant)',
+    name: 'Variety D (Rayya)',
     fileName: 'd-variety_b740ee45.txt',
     filePath: '/research/d-variety_b740ee45.txt',
     fileSize: '78.0 KB',

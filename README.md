@@ -83,27 +83,49 @@ npm run build
 
 ---
 
+## The Dialect Classifier Model
+
+The Dialect Lab and the Explorer run a real trained model (character n-gram TF-IDF + logistic regression) entirely in the browser; model files live in `public/models/`.
+To install a newly trained model, verify it and publish it, follow **[docs/MODEL_DEPLOYMENT.md](docs/MODEL_DEPLOYMENT.md)** (`npm run model:install`, `npm run test:model`).
+
+---
+
 ## Comments, Replies and Admin Setup (Firebase)
 
-Comments, replies and misclassification reports are stored in Cloud Firestore. The owner signs in with Google; there are no shared passcodes in the code.
+Comments, replies and misclassification reports live in Cloud Firestore. The owner signs in with Google; there are no shared passcodes in the code. See `SECURITY.md` for the threat model.
 
-1. **Publish the rules.** Open `firestore.rules`, replace `REPLACE_WITH_YOUR_GOOGLE_EMAIL@gmail.com` with your Google address, then publish them:
-   - Console: Firestore Database → the named database → Rules → paste → Publish, **or**
+### One-time setup (do these in order)
+1. **Publish the rules.** In `firestore.rules`, replace `REPLACE_WITH_YOUR_GOOGLE_EMAIL@gmail.com` with your Google address (also in `tests/firestore.rules.test.mjs`). Publish with either:
+   - Console: Firestore Database → your named database → Rules → paste → Publish, or
    - CLI: `npx firebase-tools deploy --only firestore:rules --project tera-web-lbcxw`
-2. **Enable Google sign-in.** Firebase Console → Authentication → Sign-in method → Google → Enable.
-3. **Authorize your site address.** Authentication → Settings → Authorized domains → add the domain the site runs on (for example `asfawgedamu.github.io`).
-4. **Publish the two featured comments (once).** Open the site, go to Projects → Community Comments, click **Author sign-in**, then **Publish the two featured comments** if the list is empty.
+2. **Enable sign-in methods.** Firebase Console → Authentication → Sign-in method: enable **Google** (for you) and **Anonymous** (for visitors; invisible to them, used for rate limits and one vote each).
+3. **Authorize the site address.** Authentication → Settings → Authorized domains → add the domain the site runs on (for example `asfawgedamu.github.io`).
+4. **Turn on 2-Step Verification** on the Google account you use as admin. It is the key to everything.
+5. **Restrict the API key.** Google Cloud Console → APIs & Services → Credentials → the Browser key → Application restrictions → HTTP referrers → add your site address and `localhost:3000/*`.
+6. **Set a budget alert.** Google Cloud Console → Billing → Budgets & alerts, so a flood of traffic cannot surprise you.
+7. **Enable App Check** (strongly recommended against scripted abuse): Firebase Console → App Check → register the web app with reCAPTCHA v3, copy the site key into `APP_CHECK_SITE_KEY` in `src/lib/firebaseConfig.ts`, rebuild, then **Enforce** it for Cloud Firestore and Authentication.
 
-Who can do what:
+### Using it
+- **Author mode:** open Projects → Community Comments → **Author sign-in**. Your replies then show an "Author" badge. You can delete any comment or reply, **Block author**, and use **Pause all new comments, replies and reports** as an emergency stop.
+- **Moderation tab:** hidden from visitors. Open the site address with `#admin` on the end (for example `https://your-site/#admin`), or sign in as author, and the Admin Moderation tab appears.
+- **Comment dates:** new comments store a full date and time (shown like "14 Nov 2026, 9:27 PM · 5 hours ago"). Comments saved before this update only stored a time of day, so they show "date not recorded". As admin, a **Set the real date** field appears on them so you can enter the correct date once.
+- **Unblocking someone:** delete their document in Firestore → `blocked`.
 
+### Who can do what
 | Action | Visitor | Owner (signed in) |
 | --- | --- | --- |
 | Read comments and replies | Yes | Yes |
-| Post a comment, reply or upvote | Yes | Yes |
+| Post a comment or reply (1 per 15 s) | Yes | Yes |
+| Reply to someone else's reply | Yes | Yes |
+| One vote per comment | Yes | Yes |
+| Delete their own comment or reply | Yes | Yes |
 | Reply labelled "Author" | No | Yes |
-| Delete a comment or reply | No | Yes |
+| Delete anyone's content, block, pause posting | No | Yes |
 | Submit a misclassification report | Yes | Yes |
 | Read, approve or reject reports | No | Yes |
+
+### Testing the rules
+`npm run test:rules` runs `tests/firestore.rules.test.mjs` against the Firestore emulator (needs Java). Run it after every change to `firestore.rules`.
 
 ---
 
@@ -117,10 +139,14 @@ Who can do what:
 │   │   └── dynamic/        # Resume, contact, GitHub explorer, Tigrinya NLP explorer, research data portal
 │   ├── context/            # ThemeContext (dark/light) and AdminContext (Google sign-in + admin check)
 │   ├── data/               # Corpora, stop words and profile data
-│   ├── lib/                # Firebase setup, comments service, moderation service
+│   ├── lib/                # Firebase setup, comments/moderation services, tdiInfer.mjs + tdiModel.ts (dialect model)
 │   ├── App.tsx             # Tab routing with lazy-loaded pages
 │   └── main.tsx            # Entry point
 ├── firestore.rules         # Database security rules (publish these)
+├── tests/                  # Rule tests (npm run test:rules) and model parity test (npm run test:model)
+├── scripts/                # install-model.mjs (validate + install a trained model)
+├── docs/                   # MODEL_DEPLOYMENT.md
+├── SECURITY.md             # Threat model and how to report a problem
 ├── firebase.json           # Firebase CLI config for the rules
 └── vite.config.ts
 ```

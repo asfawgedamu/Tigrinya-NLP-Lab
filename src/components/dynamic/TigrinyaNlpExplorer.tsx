@@ -8,6 +8,7 @@ import {
   DialectSample 
 } from '../../data/nlpData';
 import { useTheme } from '../../context/ThemeContext';
+import { useTdiModel, classifyText, explainText } from '../../lib/tdiModel';
 import { 
   BookOpen, 
   Sparkles, 
@@ -71,13 +72,7 @@ export const TigrinyaNlpExplorer: React.FC = () => {
     tokens: string[];
     charCount: number;
     features: string[];
-  } | null>({
-    variety: SAMPLE_SENTENCES[0].variety,
-    confidence: SAMPLE_SENTENCES[0].confidenceScore,
-    tokens: SAMPLE_SENTENCES[0].distinctiveTokens,
-    charCount: SAMPLE_SENTENCES[0].text.length,
-    features: ['Character 3-gram: "ኣለና" (Ethiopian auxiliary)', 'High consonant gemination', 'Ka’eb vowel preservation']
-  });
+  } | null>(null);
 
   // Dataset Live Studio state
   const [datasetRows, setDatasetRows] = useState<DatasetRow[]>(INITIAL_ANNOTATED_BATCH);
@@ -85,83 +80,46 @@ export const TigrinyaNlpExplorer: React.FC = () => {
   const [showPasteBox, setShowPasteBox] = useState<boolean>(false);
   const [isEvaluatingBatch, setIsEvaluatingBatch] = useState<boolean>(false);
 
-  // Linguistic classifier logic matching Asfaw's paper with precise prefix rules (ዝ/ዘ vs ል/ለ vs ድ/ደ)
-  const predictDialect = (text: string) => {
-    const trimmed = text.trim();
-    const zPrefixMatches = trimmed.match(/[ዝዘ][^\s]+/g) || [];
-    const lPrefixMatches = trimmed.match(/[ልለ][^\s]+/g) || [];
-    const dPrefixMatches = trimmed.match(/[ድደ][^\s]+/g) || [];
-
-    let zScore = zPrefixMatches.length * 4.0;
-    let lScore = lPrefixMatches.length * 4.0;
-    let dScore = dPrefixMatches.length * 4.0;
-
-    if (/ኣሎና|ኮይና|ብሓንሳእ|ይኸይድ|ኣስመራ|ምጽዋዕ|ገይርና|ተፋኒና/i.test(trimmed)) dScore += 3.0;
-    if (/ዕርቂ|ፈቲሖ|ዓበይቲ|ማሕረሱ|ዛዚሞ|ግራት|ወፊሩ/i.test(trimmed)) lScore += 3.0;
-    if (/ኣለና|ይቕጽል|መቐለ|ዩኒቨርሲቲ|ምርምር|መጽናዕትታት|በሊጹ|ተምሃሮ/i.test(trimmed)) zScore += 3.0;
-
-    zScore += 2.0; // prior
-
-    const total = zScore + lScore + dScore || 1;
-    let pZ = zScore / total;
-    let pL = lScore / total;
-    let pD = dScore / total;
-
-    let variety: 'Variety Z' | 'Variety L' | 'Variety D' = 'Variety Z';
-    let confidence = pZ;
-
-    if (dScore > zScore && dScore >= lScore) {
-      variety = 'Variety D';
-      confidence = Math.max(0.88, Math.min(0.96, pD));
-    } else if (lScore > zScore && lScore > dScore) {
-      variety = 'Variety L';
-      confidence = Math.max(0.88, Math.min(0.95, pL));
-    } else {
-      variety = 'Variety Z';
-      confidence = Math.max(0.89, Math.min(0.97, pZ));
-    }
-
-    return { variety, confidence };
+  // Real classifier: the trained TF-IDF character n-gram + logistic-regression model (src/lib/tdiModel.ts).
+  // Text the model refuses (not Ge'ez script) gets confidence 0; this cannot happen for the corpus rows shown here.
+  const tdi = useTdiModel();
+  const predictDialect = (text: string): { variety: 'Variety Z' | 'Variety L' | 'Variety D'; confidence: number } => {
+    const r = classifyText(text);
+    if (!r.ok) return { variety: 'Variety Z', confidence: 0 };
+    const variety = ({ Z: 'Variety Z', L: 'Variety L', D: 'Variety D' } as const)[r.label as 'Z' | 'L' | 'D'];
+    return { variety, confidence: r.confidence as number };
   };
 
-  const handleRunInference = (textToAnalyze: string, sample?: DialectSample) => {
+  const handleRunInference = (textToAnalyze: string) => {
+    if (tdi.status !== 'ready') return;
     setIsInferring(true);
-    setTimeout(() => {
-      setIsInferring(false);
-      if (sample) {
-        setAnalysisResult({
-          variety: sample.variety,
-          confidence: sample.confidenceScore,
-          tokens: sample.distinctiveTokens,
-          charCount: sample.text.length,
-          features: [sample.explanation, `Identified from ${sample.dialectName}`, '92.98% Character CNN receptive field match']
-        });
-      } else {
-        const pred = predictDialect(textToAnalyze);
-        const tokens = textToAnalyze.split(/\s+/).filter(t => t.length > 2).slice(0, 4);
-
-        setAnalysisResult({
-          variety: pred.variety,
-          confidence: pred.confidence,
-          tokens: tokens.length ? tokens : ['ትግርኛ', 'ስራሕ'],
-          charCount: textToAnalyze.length,
-          features: [
-            pred.variety === 'Variety D'
-              ? 'Phonological shift: Eritrean vocalic rounding (ኣሎና pattern typical of Asmara Tigrinya).'
-              : pred.variety === 'Variety L'
-              ? 'Regional nominal morphology matching Enderta / Southern Tigray dialect corpus.'
-              : 'Syntactic compounding matching Central Ethiopian Tigrinya corpus.',
-            'Character-level convolution activation: 1D filters (k=3, 5, 7) matched.',
-            'High distinction over baseline Naive Bayes.'
-          ]
-        });
-      }
-    }, 350);
+    const r = classifyText(textToAnalyze);
+    if (!r.ok) {
+      setAnalysisResult({
+        variety: 'Not classified', confidence: 0, tokens: [], charCount: textToAnalyze.length,
+        features: [`Refused: ${r.reason}. Please enter Tigrinya text in Ge'ez script.`]
+      });
+    } else {
+      const pred = predictDialect(textToAnalyze);
+      const grams = explainText(textToAnalyze, 6).map(e => e.gram);
+      setAnalysisResult({
+        variety: pred.variety,
+        confidence: pred.confidence,
+        tokens: grams,
+        charCount: textToAnalyze.length,
+        features: [
+          'Computed in your browser by the deployed character n-gram TF-IDF + logistic-regression model.',
+          'Listed tokens are the character sequences that pushed the decision towards this variety (␣ = word boundary).',
+          ...(pred.confidence < 0.6 ? ['Low confidence: short or mixed text has few markers; treat as a weak hint.'] : [])
+        ]
+      });
+    }
+    setIsInferring(false);
   };
 
   // Live Batch Evaluation Computation across annotated dataset
   const evaluationMetrics = useMemo(() => {
-    let total = datasetRows.length;
+    let total = tdi.status === 'ready' ? datasetRows.length : 0;
     let correct = 0;
     
     // Confusion Matrix: [Actual][Predicted]
@@ -177,7 +135,8 @@ export const TigrinyaNlpExplorer: React.FC = () => {
       'Variety D': { actual: 0, predicted: 0, truePositive: 0 }
     };
 
-    const results = datasetRows.map(row => {
+    const rowsToScore = tdi.status === 'ready' ? datasetRows : [];
+    const results = rowsToScore.map(row => {
       const pred = predictDialect(row.text);
       const isMatch = pred.variety === row.actualVariety;
       if (isMatch) correct++;
@@ -223,7 +182,7 @@ export const TigrinyaNlpExplorer: React.FC = () => {
       varietyMetrics,
       results
     };
-  }, [datasetRows]);
+  }, [datasetRows, tdi.status]);
 
   const handleIngestCustomDataset = () => {
     if (!pasteData.trim()) return;
@@ -496,7 +455,7 @@ export const TigrinyaNlpExplorer: React.FC = () => {
                     onClick={() => {
                       setActiveSample(sample);
                       setCustomText('');
-                      handleRunInference(sample.text, sample);
+                      handleRunInference(sample.text);
                     }}
                     className={`p-3 text-left rounded-xl transition border cursor-pointer ${
                       isSelected 
@@ -510,7 +469,6 @@ export const TigrinyaNlpExplorer: React.FC = () => {
                   >
                     <div className="text-xs font-semibold flex items-center justify-between">
                       <span>{sample.variety}</span>
-                      <span className={`font-mono ${isDark ? 'text-teal-400' : 'text-[#0A66C2]'}`}>{(sample.confidenceScore * 100).toFixed(1)}%</span>
                     </div>
                     <div className={`text-[11px] truncate mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{sample.dialectName}</div>
                     <div className={`text-xs font-serif line-clamp-1 mt-1.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{sample.text}</div>
@@ -540,7 +498,7 @@ export const TigrinyaNlpExplorer: React.FC = () => {
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
               <button
                 onClick={() => handleRunInference(customText || activeSample.text)}
-                disabled={isInferring}
+                disabled={isInferring || tdi.status !== 'ready'}
                 className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs font-mono transition cursor-pointer disabled:opacity-50 ${
                   isDark ? 'bg-teal-500 hover:bg-teal-400 text-slate-950' : 'bg-[#0A66C2] hover:bg-[#004182] text-white shadow-xs'
                 }`}
@@ -1071,7 +1029,7 @@ export const TigrinyaNlpExplorer: React.FC = () => {
               isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
             }`}>
               <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-bold text-[cyan-400] px-2 py-0.5 rounded bg-rose-500/10">
+                <span className="font-mono text-xs font-bold text-cyan-400 px-2 py-0.5 rounded bg-rose-500/10">
                   Variety Z
                 </span>
                 <span className="font-mono text-xs text-slate-400">North / Standard</span>

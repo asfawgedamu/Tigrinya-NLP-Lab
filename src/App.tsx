@@ -66,10 +66,7 @@ export default function App() {
       <main className="flex-1">
         <Suspense fallback={<div className="p-10 text-center font-mono text-xs opacity-70">Loading…</div>}>
         {activeTab === 'home' && (
-          <OverviewHero
-            onNavigate={handleNavigate}
-            onOpenCommandPalette={() => setCommandPaletteOpen(true)}
-          />
+          <OverviewHero onNavigate={handleNavigate} />
         )}
 
         {activeTab === 'projects' && (

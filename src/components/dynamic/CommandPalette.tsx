@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Terminal, BookOpen, Layers, Database, GitBranch, FileText, Send, Rocket, Sparkles, X } from 'lucide-react';
+import { Search, Terminal, BookOpen, GitBranch, FileText, Send, Sparkles, X } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
 export interface CommandItem {
@@ -34,8 +34,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
     },
     {
       id: 'nav-portal',
-      title: 'Tigrinya Research Data Portal',
-      subtitle: 'Browse & download 52 parallel annotated texts across Variety Z, Variety L, and Variety D',
+      title: 'Sample Corpus',
+      subtitle: 'Browse and export 52 parallel texts in Variety Z, L and D',
       category: 'Research & NLP',
       icon: BookOpen,
       action: () => { onNavigate('projects'); onClose(); }
@@ -43,31 +43,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
     {
       id: 'nav-nlp',
       title: 'Tigrinya Dialect Lab & Live Inference',
-      subtitle: 'Upload files or paste Ge’ez text to test 92.98% character-level CNN dialect classification',
+      subtitle: 'Paste Ge’ez text and classify it as Variety Z, L or D',
       category: 'Research & NLP',
       icon: Sparkles,
       action: () => { onNavigate('nlp-lab'); onClose(); }
     },
     {
-      id: 'nav-fastapi',
-      title: 'FastAPI Clean Architecture Workbench',
-      subtitle: '3-tier evolutionary lab series: Level 1 to Hexagonal Clean Architecture',
-      category: 'Backend & DB',
-      icon: Layers,
-      action: () => { onNavigate('fastapi-arch'); onClose(); }
-    },
-    {
-      id: 'nav-database',
-      title: 'Enterprise Database Console',
-      subtitle: '15 production SQL/PL-SQL diagnostics scripts for Oracle 19c & PostgreSQL',
-      category: 'Backend & DB',
-      icon: Database,
-      action: () => { onNavigate('database-console'); onClose(); }
-    },
-    {
       id: 'nav-repos',
-      title: 'Live GitHub Repositories Hub',
-      subtitle: 'Real-time repository explorer connected directly to GitHub API',
+      title: 'GitHub Repositories',
+      subtitle: 'Browse public repositories',
       category: 'Navigation',
       icon: GitBranch,
       action: () => { onNavigate('github-hub'); onClose(); }
@@ -83,18 +67,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
     {
       id: 'nav-contact',
       title: 'Contact & Collaboration',
-      subtitle: 'Direct Google Apps Script webhook form to asfawg@gmail.com',
+      subtitle: 'Get in touch',
       category: 'Actions',
       icon: Send,
       action: () => { onNavigate('contact'); onClose(); }
-    },
-    {
-      id: 'nav-deploy',
-      title: 'One-Click Deploy & GitHub Pages Packager',
-      subtitle: 'Pre-compiled production assets & one-command publish script for asfawgedamu.github.io',
-      category: 'Actions',
-      icon: Rocket,
-      action: () => { onNavigate('deploy-center'); onClose(); }
     },
     {
       id: 'action-theme',
@@ -110,7 +86,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose,
       subtitle: 'Tigrinya Dialect Identification (kiG8qiUFm2u)',
       category: 'Research & NLP',
       icon: Sparkles,
-      action: () => { window.open('https://openreview.net/pdf?id=kiG8qiUFm2u', '_blank'); onClose(); }
+      action: () => { window.open('https://openreview.net/pdf?id=kiG8qiUFm2u', '_blank', 'noopener,noreferrer'); onClose(); }
     }
   ];
 

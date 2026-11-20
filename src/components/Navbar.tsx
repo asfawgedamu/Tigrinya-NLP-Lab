@@ -92,14 +92,14 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
               onClick={toggleTheme}
               className={`p-2 rounded-[6px] border transition-colors cursor-pointer ${
                 isDark 
-                  ? 'border-[slate-800] text-[#E6ECE8] hover:bg-[slate-900/80]' 
+                  ? 'border-slate-800 text-[#E6ECE8] hover:bg-slate-900/80' 
                   : 'border-[#C5CEC8] text-[#17262A] hover:bg-[#E1E6E0]'
               }`}
               title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
               aria-label="Toggle theme"
             >
               {isDark ? (
-                <Sun className="w-4 h-4 text-[cyan-300]" />
+                <Sun className="w-4 h-4 text-cyan-300" />
               ) : (
                 <Moon className="w-4 h-4 text-[#17262A]" />
               )}
@@ -111,17 +111,17 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             <button
               onClick={toggleTheme}
               className={`p-2 rounded-[6px] border transition-colors ${
-                isDark ? 'border-[slate-800] text-[#E6ECE8]' : 'border-[#C5CEC8] text-[#17262A]'
+                isDark ? 'border-slate-800 text-[#E6ECE8]' : 'border-[#C5CEC8] text-[#17262A]'
               }`}
               aria-label="Toggle theme"
             >
-              {isDark ? <Sun className="w-4 h-4 text-[cyan-300]" /> : <Moon className="w-4 h-4 text-[#17262A]" />}
+              {isDark ? <Sun className="w-4 h-4 text-cyan-300" /> : <Moon className="w-4 h-4 text-[#17262A]" />}
             </button>
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className={`p-2 rounded-[6px] border transition-colors ${
-                isDark ? 'border-[slate-800] text-[#E6ECE8]' : 'border-[#C5CEC8] text-[#17262A]'
+                isDark ? 'border-slate-800 text-[#E6ECE8]' : 'border-[#C5CEC8] text-[#17262A]'
               }`}
               aria-label="Toggle menu"
             >
@@ -135,7 +135,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className={`md:hidden border-t px-4 py-3 space-y-1 ${
-          isDark ? 'border-[slate-800] bg-[slate-950]' : 'border-[#C5CEC8] bg-[#ECEFEA]'
+          isDark ? 'border-slate-800 bg-slate-950' : 'border-[#C5CEC8] bg-[#ECEFEA]'
         }`}>
           {navLinks.map((item) => {
             const isActive = activeTab === item.id;
@@ -145,8 +145,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
                 onClick={() => handleSelectTab(item.id)}
                 className={`w-full text-left py-2.5 px-3 rounded-[6px] text-base transition-colors ${
                   isActive
-                    ? 'font-medium text-[cyan-400] ' + (isDark ? 'bg-[slate-900/80]' : 'bg-[#E1E6E0]')
-                    : isDark ? 'text-[#9DB0AE] hover:text-white hover:bg-[slate-900/80]' : 'text-[#516064] hover:text-[#17262A] hover:bg-[#E1E6E0]'
+                    ? 'font-medium text-cyan-400 ' + (isDark ? 'bg-slate-900/80' : 'bg-[#E1E6E0]')
+                    : isDark ? 'text-[#9DB0AE] hover:text-white hover:bg-slate-900/80' : 'text-[#516064] hover:text-[#17262A] hover:bg-[#E1E6E0]'
                 }`}
               >
                 {item.label}

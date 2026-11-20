@@ -75,7 +75,7 @@ export const USER_INFO = {
     'BA, Journalism and communications'
   ],
   stats: {
-    publicRepos: 29,
+    publicRepos: 8,
     yearsAtEthioTelecom: '19+',
     engineersUpskilled: '500+',
     accuracyNlp: '92.98%',

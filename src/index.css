@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
   :root {
@@ -119,3 +120,96 @@
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }
+
+/* ------------------------------------------------------------------
+   Accessible colour layer (WCAG AA, 4.5:1 for text)
+   Accent colours used on dark surfaces (cyan-400, amber-400 …) are far
+   too pale on a light surface, so on the light theme they are mapped to
+   their darker, readable counterparts. Solid buttons keep white labels.
+   ------------------------------------------------------------------ */
+
+/* Solid accent buttons with white labels: same dark teal in both themes */
+.bg-cyan-400.text-white, .bg-cyan-500.text-white,
+.bg-teal-400.text-white, .bg-teal-500.text-white {
+  background-color: #0e7490 !important;
+  color: #ffffff !important;
+}
+.bg-cyan-400.text-white:hover, .bg-cyan-500.text-white:hover,
+.bg-teal-400.text-white:hover, .bg-teal-500.text-white:hover {
+  background-color: #155e75 !important;
+}
+
+html:not(.dark) {
+  /* accent text */
+  .text-cyan-300, .text-cyan-400, .text-cyan-500, .text-cyan-600 { color: #155e75; }
+  .text-teal-300, .text-teal-400, .text-teal-500, .text-teal-600 { color: #0f766e; }
+  .text-sky-400, .text-sky-500 { color: #0369a1; }
+  .text-blue-400, .text-blue-500, .text-blue-600 { color: #1d4ed8; }
+  .text-indigo-300, .text-indigo-400, .text-indigo-500 { color: #4338ca; }
+  .text-purple-400, .text-violet-400 { color: #7e22ce; }
+  .text-emerald-300, .text-emerald-400, .text-emerald-500, .text-emerald-600 { color: #047857; }
+  .text-amber-400, .text-amber-500, .text-amber-600 { color: #92400e; }
+  .text-orange-400, .text-orange-500 { color: #c2410c; }
+  .text-rose-400, .text-rose-500, .text-red-400, .text-red-500 { color: #b91c1c; }
+  .text-teal-100, .text-teal-200 { color: #134e4a; }
+  /* neutral text that is too faint on white/grey */
+  .text-slate-300, .text-slate-400, .text-slate-500 { color: #475569; }
+  .text-gray-400, .text-gray-500 { color: #4b5563; }
+
+  /* pale blue/cyan surfaces are replaced by clearly visible neutral ones */
+  .bg-blue-50, .bg-sky-50, .bg-cyan-50, .bg-teal-50,
+  .bg-blue-50\/50, .bg-blue-50\/70, .bg-blue-50\/80 { background-color: #e6ebf2; }
+  .border-blue-200, .border-sky-200, .border-cyan-200, .border-cyan-300 { border-color: #94a3b8; }
+  .bg-emerald-50 { background-color: #dcefe6; }
+  .border-emerald-200 { border-color: #6ea88d; }
+  .bg-rose-50, .bg-red-50 { background-color: #f6e1e1; }
+  .border-rose-200 { border-color: #c98a8a; }
+
+  /* translucent accent chips get a slightly stronger tint */
+  .bg-cyan-500\/10, .bg-cyan-500\/20, .bg-cyan-400\/10 { background-color: rgba(14, 116, 144, .12); }
+  .border-cyan-500\/30, .border-cyan-500\/40, .border-cyan-400\/40 { border-color: rgba(14, 116, 144, .55); }
+  .bg-teal-500\/10, .bg-teal-500\/20 { background-color: rgba(15, 118, 110, .12); }
+  .bg-blue-500\/10 { background-color: rgba(29, 78, 216, .10); }
+
+  /* form controls must always be readable */
+  input, textarea, select { color: #0f172a; }
+  ::placeholder { color: #64748b; opacity: 1; }
+}
+
+html.dark {
+  /* dark theme: text that was authored for light surfaces */
+  ::placeholder { color: #94a3b8; opacity: 1; }
+  .text-cyan-700, .text-teal-700, .text-blue-600 { color: #67e8f9; }
+  .text-emerald-600, .text-emerald-700 { color: #6ee7b7; }
+  .text-amber-600, .text-amber-700 { color: #fcd34d; }
+  .text-rose-700, .text-red-600, .text-red-500 { color: #fca5a5; }
+  .text-slate-500, .text-slate-600, .text-slate-700 { color: #cbd5e1; }
+}
+
+/* ------------------------------------------------------------------
+   Hairline borders. Tailwind v4 draws un-coloured borders in the text
+   colour (near-black / white), which made tables look heavily ruled.
+   ------------------------------------------------------------------ */
+:root { --line: rgba(15, 23, 42, 0.12); --line-strong: rgba(15, 23, 42, 0.22); }
+html.dark { --line: rgba(148, 163, 184, 0.16); --line-strong: rgba(148, 163, 184, 0.28); }
+@layer base {
+  *, ::before, ::after, ::backdrop { border-color: var(--line); }
+}
+.border-inherit { border-color: var(--line); }
+.divide-inherit > * { border-color: var(--line); }
+
+/* Tables: horizontal hairlines only, quiet header, soft row hover */
+.data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.data-table thead th {
+  position: sticky; top: 0;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  padding: .75rem 1rem; text-align: left; white-space: nowrap;
+  border-bottom: 1px solid var(--line-strong);
+}
+.data-table tbody td { padding: .8rem 1rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.data-table tbody tr:last-child td { border-bottom: 0; }
+.data-table tbody tr { transition: background-color .12s; }
+html:not(.dark) .data-table tbody tr:hover { background: rgba(15, 23, 42, .04); }
+html.dark .data-table tbody tr:hover { background: rgba(148, 163, 184, .08); }
+html:not(.dark) .data-table thead th { background: #f4f6f3; color: #334155; }
+html.dark .data-table thead th { background: #0b1220; color: #cbd5e1; }

@@ -1,12 +1,14 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { SAMPLE_SENTENCES, DialectSample } from '../data/nlpData';
+import { ResearchDataPortal } from './dynamic/ResearchDataPortal';
 import { detectAmharicStopWords } from '../data/amharicStopWords';
 import { describeFirebaseError } from '../lib/firebase';
 import { submitReport, useReports } from '../lib/feedback';
 import { useAdmin } from '../context/AdminContext';
 import { CommentsPanel } from './CommentsPanel';
 import { ModerationPanel } from './ModerationPanel';
+import { useTdiModel, loadTdiModel, classifyText, explainText } from '../lib/tdiModel';
 import {
   BarChart,
   Bar,
@@ -130,195 +132,73 @@ function runLinguisticValidator(text: string): ValidationReport {
   return { isValid, geezDensity: Number(geezDensity.toFixed(1)), tigrinyaKeywordCount: keywordHits, message };
 }
 
+const CODE_TO_VARIETY: Record<string, DialectVariety> = { Z: 'Variety Z', L: 'Variety L', D: 'Variety D' };
+/** Below this probability the answer is shown with a warning (the model is not sure). */
+const LOW_CONFIDENCE = 0.6;
+
+/** Result shown before anything has been classified (never displayed: results stay hidden until Classify). */
+function emptyResult(): InferenceResult {
+  return {
+    id: 'empty', text: '', predictedVariety: 'Variety Z', varietyLabel: '', confidence: 0,
+    distribution: { varietyZ: 0, varietyL: 0, varietyD: 0 }, keyFeatures: [], diagnosticTokens: [],
+    explanation: '', charCount: 0, geezCharCount: 0
+  };
+}
+
 /**
- * Linguistic rules engine simulating the 92.98% Character-level CNN with precise morpho-syntactic prefix rules (ዝ/ዘ vs ል/ለ vs ድ/ደ).
- * Dynamically adjusts results based on the selected model architecture and strictly refuses non-Tigrinya/Amharic input.
+ * Real inference: the trained TF-IDF character n-gram + logistic-regression model (src/lib/tdiModel.ts).
+ * Two guards run first: non-Ge'ez input is refused, and Amharic (a close relative that would otherwise be
+ * pushed into L or D) is refused when its function words are found. The model must already be loaded.
  */
-function runMockInference(text: string, id: string = 'single-1', modelChoice: string = 'char-cnn'): InferenceResult {
+function runInference(text: string, id: string = 'single-1'): InferenceResult {
   const trimmed = text.trim();
-  const geezMatches = trimmed.match(GEEZ_REGEX) || [];
-  const geezCharCount = geezMatches.length;
+  const geezCharCount = (trimmed.match(GEEZ_REGEX) || []).length;
+  const base = { id, text: trimmed, charCount: trimmed.length, geezCharCount };
+  const refused = (rejectionReason: 'non-geez' | 'amharic', varietyLabel: string, explanation: string, features: string[], tokens: string[] = [], extra = {}): InferenceResult => ({
+    ...base, predictedVariety: 'Variety Z', varietyLabel, confidence: 0,
+    distribution: { varietyZ: 0, varietyL: 0, varietyD: 0 }, keyFeatures: features, diagnosticTokens: tokens,
+    explanation, rejectionReason, ...extra
+  });
 
-  const isEnglishOrLatin = /^[a-zA-Z\s\.,!?;:\-_0-9]+$/.test(trimmed);
-
-  if (isEnglishOrLatin || geezCharCount === 0) {
-    return {
-      id,
-      text: trimmed,
-      predictedVariety: 'Variety Z',
-      varietyLabel: 'Classification Rejected: Non-Ge’ez / Latin Input',
-      confidence: 0,
-      distribution: { varietyZ: 0, varietyL: 0, varietyD: 0 },
-      keyFeatures: ['Input text must be in Ethiopic Ge’ez script to classify Tigrinya dialects.'],
-      diagnosticTokens: [],
-      explanation: 'Classification Refused: Non-Ge’ez or English input detected. Please provide Tigrinya text in Ge’ez script.',
-      charCount: trimmed.length,
-      geezCharCount,
-      rejectionReason: 'non-geez'
-    };
+  const pred = classifyText(trimmed);
+  if (!pred.ok && pred.reason !== "not Ge'ez-script text" && pred.reason !== 'empty input') {
+    // e.g. model not loaded or nothing left after cleaning
+    return refused('non-geez', 'Classification Rejected: ' + (pred.reason || 'no usable text'),
+      'Classification Refused: ' + (pred.reason || 'no usable text') + '.', ['Provide a Tigrinya sentence in Ge’ez script.']);
+  }
+  if (!pred.ok) {
+    return refused('non-geez', 'Classification Rejected: Non-Ge’ez / Latin Input',
+      'Classification Refused: the text is empty or not mostly Ge’ez script. Please provide Tigrinya text in Ge’ez script.',
+      ['Input text must be in Ethiopic Ge’ez script to classify Tigrinya dialects.']);
   }
 
-  // Amharic guard: Amharic is closely related to Tigrinya and would otherwise be
-  // mis-assigned to Variety L or D. Any core Amharic stop word means: do not classify.
   const amharicMatches = detectAmharicStopWords(trimmed);
   if (amharicMatches.length > 0) {
-    return {
-      id,
-      text: trimmed,
-      predictedVariety: 'Variety Z',
-      varietyLabel: 'Classification Rejected: Amharic Input Detected',
-      confidence: 0,
-      distribution: { varietyZ: 0, varietyL: 0, varietyD: 0 },
-      keyFeatures: ['Amharic function words found: ' + amharicMatches.slice(0, 6).join(', ')],
-      diagnosticTokens: amharicMatches.slice(0, 6),
-      explanation: 'Classification Refused: this text looks like Amharic, not Tigrinya. Please input Tigrinya text.',
-      charCount: trimmed.length,
-      geezCharCount,
-      rejectionReason: 'amharic',
-      amharicMatches
-    };
+    return refused('amharic', 'Classification Rejected: Amharic Input Detected',
+      'Classification Refused: this text looks like Amharic, not Tigrinya. Please input Tigrinya text.',
+      ['Amharic function words found: ' + amharicMatches.slice(0, 6).join(', ')], amharicMatches.slice(0, 6), { amharicMatches });
   }
 
-  // Primary morpho-syntactic prefix counters
-  const zPrefixMatches = trimmed.match(/[ዝዘ][^\s]+/g) || [];
-  const lPrefixMatches = trimmed.match(/[ልለ][^\s]+/g) || [];
-  const dPrefixMatches = trimmed.match(/[ድደ][^\s]+/g) || [];
-
-  let zScore = zPrefixMatches.length * 4.0;
-  let lScore = lPrefixMatches.length * 4.0;
-  let dScore = dPrefixMatches.length * 4.0;
-
-  const detectedTokens: string[] = [];
-  zPrefixMatches.slice(0, 3).forEach(m => detectedTokens.push(m));
-  lPrefixMatches.slice(0, 3).forEach(m => detectedTokens.push(m));
-  dPrefixMatches.slice(0, 3).forEach(m => detectedTokens.push(m));
-
-  const rayyanExistential = ['ድንሆ', 'ድንሃ', 'ድንሀው', 'ድንሀዋ', 'ራያ', 'ኦፍላ', 'ኣላማጣ'];
-  const endertaExistential = ['ለሎ', 'ለላ', 'ለለው', 'ለለዋ', 'እንደርታ', 'ተምበን', 'ሰሓርቲ'];
-  const standardMarkers = ['ኣለና', 'ይቕጽል', 'መቐለ', 'ዩኒቨርሲቲ', 'ምርምር', 'መጽናዕትታት', 'በሊጹ', 'ተምሃሮ', 'ሞዴል', 'ቀረባ', 'ዘሎ', 'ዘላ', 'ዘለው', 'ዘለዋ'];
-
-  const hasYConnector = /[\u1200-\u137F]+ይ\b/g.test(trimmed) || trimmed.includes('ይ ሰላም') || trimmed.includes('ይ ብዕርቂ');
-  const hasNConnector = /[\u1200-\u137F]+ን\b/g.test(trimmed) || trimmed.includes('ንኩሉ') || trimmed.includes('ንሰርሕ');
-
-  rayyanExistential.forEach(m => {
-    if (trimmed.includes(m)) {
-      dScore += 6.0;
-      if (!detectedTokens.includes(m)) detectedTokens.push(m);
-    }
-  });
-
-  endertaExistential.forEach(m => {
-    if (trimmed.includes(m)) {
-      lScore += 6.0;
-      if (!detectedTokens.includes(m)) detectedTokens.push(m);
-    }
-  });
-
-  standardMarkers.forEach(m => {
-    if (trimmed.includes(m)) {
-      zScore += 4.0;
-      if (!detectedTokens.includes(m)) detectedTokens.push(m);
-    }
-  });
-
-  if (hasYConnector) {
-    lScore += 3.0;
-    dScore += 3.0;
-  }
-  if (hasNConnector) {
-    zScore += 2.5;
-  }
-
-  zScore += 2.0;
-
-  // Apply model-specific weight biases so changing model modifies results
-  if (modelChoice === 'afro-xlmr-transformer') {
-    zScore *= 1.08; lScore *= 1.08; dScore *= 1.08;
-  } else if (modelChoice === 'naive-bayes') {
-    zScore = Math.sqrt(zScore) + 2.5;
-    lScore = Math.sqrt(lScore) + 2.5;
-    dScore = Math.sqrt(dScore) + 2.5;
-  } else if (modelChoice === 'svm') {
-    if (zScore >= lScore && zScore >= dScore) zScore *= 1.25;
-    else if (lScore >= zScore && lScore >= dScore) lScore *= 1.25;
-    else dScore *= 1.25;
-  }
-
-  let totalRaw = zScore + lScore + dScore;
-  if (totalRaw === 0) totalRaw = 1;
-
-  let pZ = zScore / totalRaw;
-  let pL = lScore / totalRaw;
-  let pD = dScore / totalRaw;
-
-  // Determine winner
-  let predictedVariety: DialectVariety = 'Variety Z';
-  let rawWinningProb = pZ;
-
-  if (dScore > zScore && dScore >= lScore) {
-    predictedVariety = 'Variety D';
-    rawWinningProb = pD;
-  } else if (lScore > zScore && lScore > dScore) {
-    predictedVariety = 'Variety L';
-    rawWinningProb = pL;
-  } else {
-    predictedVariety = 'Variety Z';
-    rawWinningProb = pZ;
-  }
-
-  // Dynamic live confidence calculation based on model capacity and text token clarity
-  let baseAccuracyCap = 0.9298;
-  let modelBias = 0;
-  if (modelChoice === 'afro-xlmr-transformer') { baseAccuracyCap = 0.9580; modelBias = 0.03; }
-  else if (modelChoice === 'char-cnn') { baseAccuracyCap = 0.9298; modelBias = 0.015; }
-  else if (modelChoice === 'cnn-bilstm') { baseAccuracyCap = 0.9235; modelBias = 0.008; }
-  else if (modelChoice === 'bilstm') { baseAccuracyCap = 0.8991; modelBias = -0.01; }
-  else if (modelChoice === 'ann') { baseAccuracyCap = 0.890; modelBias = -0.025; }
-  else if (modelChoice === 'svm') { baseAccuracyCap = 0.870; modelBias = -0.04; }
-  else if (modelChoice === 'naive-bayes') { baseAccuracyCap = 0.830; modelBias = -0.07; }
-
-  const featureClarityBonus = Math.min(0.06, detectedTokens.length * 0.015 + (geezCharCount > 30 ? 0.03 : 0));
-  const modelHashOffset = ((modelChoice.charCodeAt(0) * 17) % 7) * 0.004;
-  let confidence = Math.min(baseAccuracyCap, Math.max(0.70, rawWinningProb * 0.40 + 0.52 + featureClarityBonus + modelBias + modelHashOffset));
-  if (confidence > baseAccuracyCap) confidence = baseAccuracyCap;
-
-  // Diagnostics and explanations
-  const features: string[] = [];
-  let explanation = '';
-
-  if (predictedVariety === 'Variety D') {
-    features.push('Alveolar stop shift in relative/nominal prefixes (ድ-/ደ- instead of ዝ-/ል-)');
-    features.push('Rayya existential/auxiliary markers (ድንሆ / ድንሃ / ድንሀው / ድንሀዋ)');
-    features.push('Use of [ይ] word connector and colloquial Rayya clitics');
-    explanation = `Identified as Variety D (Rayya) using [${modelChoice}] pipeline based on [d-] relative prefixes and Rayya existential markers.`;
-  } else if (predictedVariety === 'Variety L') {
-    features.push('Lateral liquid prefix substitution (ል-/ለ- markers typical of Enderta / Mekelle)');
-    features.push('Enderta/Mekelle existential markers (ለሎ / ለላ / ለለው / ለለዋ)');
-    features.push('Use of [ይ] connector instead of [ን] between words');
-    explanation = `Identified as Variety L (Enderta/Mekelle) using [${modelChoice}] pipeline based on [l-] relative markers and existentials.`;
-  } else {
-    features.push('Standard dental alveolar fricative relative prefix (ዝ-/ዘ- markers e.g. ዝወሰደ, ዘየልመዖ)');
-    features.push('Standard auxiliary verb compounding (ኣለና / ዘሎ) and [ን] connectors');
-    features.push('Academic and standard media orthography concordance');
-    explanation = `Identified as Variety Z (Standard) using [${modelChoice}] pipeline based on standard [z-] relative clauses.`;
-  }
-
+  const variety = CODE_TO_VARIETY[pred.label as string];
+  const probs = pred.probabilities as Record<string, number>;
+  const top = explainText(trimmed, 6).map(e => e.gram);
+  const pct = Math.round((pred.confidence as number) * 100);
+  const low = (pred.confidence as number) < LOW_CONFIDENCE;
+  const features = [
+    `Model probability for ${VARIETY_INFO[variety].name}: ${pct}%.`,
+    top.length ? `Character sequences that pushed the decision towards ${variety} (␣ = word boundary): ${top.join('  ')}` : 'No single character sequence dominated the decision.',
+    VARIETY_INFO[variety].description
+  ];
+  if (low) features.unshift('Low confidence: the three varieties are close. Short or mixed text often has few markers; treat this as a weak hint.');
   return {
-    id,
-    text: trimmed,
-    predictedVariety,
-    varietyLabel: VARIETY_INFO[predictedVariety].name,
-    confidence: Number(confidence.toFixed(3)),
-    distribution: {
-      varietyZ: Number(pZ.toFixed(3)),
-      varietyL: Number(pL.toFixed(3)),
-      varietyD: Number(pD.toFixed(3))
-    },
+    ...base,
+    predictedVariety: variety,
+    varietyLabel: VARIETY_INFO[variety].name,
+    confidence: Number((pred.confidence as number).toFixed(3)),
+    distribution: { varietyZ: Number(probs.Z.toFixed(3)), varietyL: Number(probs.L.toFixed(3)), varietyD: Number(probs.D.toFixed(3)) },
     keyFeatures: features,
-    diagnosticTokens: Array.from(new Set(detectedTokens)),
-    explanation,
-    charCount: trimmed.length,
-    geezCharCount
+    diagnosticTokens: top,
+    explanation: `Most resembles ${VARIETY_INFO[variety].name} (${pct}%). Computed in your browser by a character n-gram TF-IDF + logistic-regression model trained on the project corpus.` + (low ? ' Confidence is low.' : '')
   };
 }
 
@@ -339,8 +219,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
   React.useEffect(() => {
     if (initialText) {
       setInputText(initialText);
-      const res = runMockInference(initialText, `inf-${Date.now()}`);
-      setSingleResult(res);
+      withModel(() => setSingleResult(runInference(initialText, `inf-${Date.now()}`)));
       setActiveTabMode('single');
     }
   }, [initialText]);
@@ -349,16 +228,11 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [activeTabMode, setActiveTabMode] = useState<'single' | 'batch' | 'admin-moderation' | 'visitor-comments'>('single');
-  const [modelCategory, setModelCategory] = useState<'classic' | 'deep'>('deep');
-  const [modelChoice, setModelChoice] = useState<string>('char-cnn');
-
-  // Re-run inference immediately when modelChoice changes
-  React.useEffect(() => {
-    if (inputText.trim()) {
-      const res = runMockInference(inputText, `inf-${Date.now()}`, modelChoice);
-      setSingleResult(res);
-    }
-  }, [modelChoice]);
+  const tdi = useTdiModel();
+  /** Run `fn` once the model is available (downloads it on first use). */
+  const withModel = (fn: () => void) => {
+    loadTdiModel().then(fn).catch(() => { /* the status banner shows the error and a retry button */ });
+  };
 
   const [validationWarning, setValidationWarning] = useState<string | null>(null);
   const [expertFeedback, setExpertFeedback] = useState<{
@@ -372,6 +246,16 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
   const [suggestedCorrectVariety, setSuggestedCorrectVariety] = useState<DialectVariety>('Variety Z');
   const [feedbackNotes, setFeedbackNotes] = useState<string>('');
   const { isAdmin } = useAdmin();
+  // The moderation tab is hidden from visitors. Open the site with #admin in the address to reveal it.
+  const [adminHash, setAdminHash] = useState<boolean>(() => window.location.hash === '#admin');
+  useEffect(() => {
+    const onHash = () => setAdminHash(window.location.hash === '#admin');
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  void adminHash;
+  const showAdminTab = true; // the sign-in is always reachable; access is enforced by the Firestore rules
+  const [showComments, setShowComments] = useState<boolean>(false);
   const { reports, error: reportsError } = useReports(isAdmin);
   const pendingReports = reports.filter((r) => r.status === 'Pending Validation').length;
   const [reportBusy, setReportBusy] = useState<boolean>(false);
@@ -385,7 +269,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
         errorType: misclassificationType,
         correct: suggestedCorrectVariety,
         notes: feedbackNotes,
-      });
+      }, isAdmin);
       setFeedbackNotes('');
       setShowFeedbackForm(false);
       setExpertFeedback({
@@ -426,10 +310,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
 
   // Single inference result
   const [singleResult, setSingleResult] = useState<InferenceResult>(() =>
-    runMockInference(
-      SAMPLE_SENTENCES[0]?.text || 'ንሕና ኣብ መቐለ ዩኒቨርሲቲ ንሰርሕ ኣለና። እቲ ናይ ምርምር ስራሕ ብጽቡቕ ይቕጽል ኣሎ።',
-      'initial-1'
-    )
+    emptyResult()
   );
 
   // Collapsible output state (hidden by default until Classify is clicked)
@@ -482,13 +363,11 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
 
     setIsRunning(true);
     setExpertFeedback({ given: false, correctVariety: null, message: null });
-    setTimeout(() => {
-      const result = runMockInference(inputText, `inf-${Date.now()}`, modelChoice);
-      setSingleResult(result);
-      setIsRunning(false);
+    loadTdiModel().then(() => {
+      setSingleResult(runInference(inputText, `inf-${Date.now()}`));
       setShowResults(true);
       setResultsExpanded(true);
-    }, 280);
+    }).catch(() => {}).finally(() => setIsRunning(false));
   };
 
   // Process File Upload (.txt, .csv, .tsv, .json)
@@ -514,7 +393,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
         // Run batch mode
         setActiveTabMode('batch');
         setIsRunning(true);
-        setTimeout(() => {
+        loadTdiModel().then(() => {
           const results = lines.map((line, idx) => {
             // Strip CSV quotes if needed
             let cleanLine = line;
@@ -524,17 +403,15 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
             } else if (line.includes(',')) {
               cleanLine = line.split(',')[0].trim();
             }
-            return runMockInference(cleanLine, `batch-${idx + 1}`);
+            return runInference(cleanLine, `batch-${idx + 1}`);
           });
           setBatchResults(results);
-          setIsRunning(false);
-        }, 400);
+        }).catch(() => {}).finally(() => setIsRunning(false));
       } else {
         // Single line file
         setInputText(content);
         setActiveTabMode('single');
-        const res = runMockInference(content, 'upload-single');
-        setSingleResult(res);
+        withModel(() => setSingleResult(runInference(content, 'upload-single')));
       }
     };
     reader.readAsText(file);
@@ -635,8 +512,9 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                     : 'bg-white border-[#C5CEC8] text-[#516064] hover:text-[#17262A]'
               }`}
             >
-              Batch File / Corpus Mode {batchResults.length > 0 && `(${batchResults.length})`}
+              Sample Corpus
             </button>
+            {showAdminTab && (
             <button
               onClick={() => setActiveTabMode('admin-moderation')}
               className={`px-4 py-2 rounded-[4px] text-xs font-mono font-medium transition-colors cursor-pointer border flex items-center gap-1.5 ${
@@ -647,13 +525,14 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                     : 'bg-white border-[#C5CEC8] text-[#516064] hover:text-[#17262A]'
               }`}
             >
-              <span>Admin Moderation</span>
+              <span>Admin</span>
               {isAdmin && pendingReports > 0 && (
                 <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px]">
                   {pendingReports}
                 </span>
               )}
             </button>
+            )}
             <button
               onClick={() => setActiveTabMode('visitor-comments')}
               className={`px-4 py-2 rounded-[4px] text-xs font-mono font-medium transition-colors cursor-pointer border flex items-center gap-1.5 ${
@@ -664,7 +543,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                     : 'bg-white border-[#C5CEC8] text-[#516064] hover:text-[#17262A]'
               }`}
             >
-              <span>Community Comments</span>
+              <span>Comments</span>
             </button>
           </div>
         </div>
@@ -702,8 +581,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                   key={idx}
                   onClick={() => {
                     setInputText(sample.text);
-                    const res = runMockInference(sample.text, `quick-${idx}`);
-                    setSingleResult(res);
+                    withModel(() => setSingleResult(runInference(sample.text, `quick-${idx}`)));
                     setShowResults(true);
                     setResultsExpanded(true);
                   }}
@@ -729,137 +607,60 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
             </div>
           </div>
 
-          {/* Model Family & Architecture Selector */}
+          {/* Deployed model: one real model, described from its model card (no selectable fake models) */}
           <div className={`p-4 rounded-[6px] border space-y-3 ${
             isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-[#E1E6E0] border-[#C5CEC8]'
-          }`}>
+          }`} aria-live="polite">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
-              <span className={`text-xs font-mono uppercase tracking-wider ${
-                isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'
+              <span className={`text-xs font-mono uppercase tracking-wider ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}`}>
+                Deployed model
+              </span>
+              <span className={`text-[11px] font-mono ${
+                tdi.status === 'ready' ? (isDark ? 'text-emerald-400' : 'text-emerald-700')
+                : tdi.status === 'error' ? 'text-red-500' : (isDark ? 'text-amber-300' : 'text-amber-700')
               }`}>
-                Select Classifier Pipeline & Model:
-              </span>
-
-              {/* Dropdown Menu for Model Selection */}
-              <div className="relative w-full sm:w-auto min-w-0">
-                <select
-                  value={modelChoice}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setModelChoice(val);
-                    if (['naive-bayes', 'svm', 'ann'].includes(val)) {
-                      setModelCategory('classic');
-                    } else {
-                      setModelCategory('deep');
-                    }
-                  }}
-                  className={`w-full sm:w-auto max-w-full px-3 py-2 sm:py-1.5 rounded-[4px] border font-mono text-xs font-semibold focus:outline-none transition cursor-pointer text-ellipsis ${
-                    isDark 
-                      ? 'bg-slate-950 border-slate-800 text-[#E6ECE8] focus:border-cyan-300' 
-                      : 'bg-white border-[#C5CEC8] text-[#17262A] focus:border-cyan-400'
-                  }`}
-                >
-                  <optgroup label="Classical Rule-Based Pipelines">
-                    <option value="naive-bayes">Naive Bayes with N-Grams (Acc: 83.0%)</option>
-                    <option value="svm">Linear Support Vector Machine (Acc: 87.0%)</option>
-                    <option value="ann">Artificial Neural Net / MLP (Acc: 89.0%)</option>
-                  </optgroup>
-                  <optgroup label="Deep Learning Pipelines">
-                    <option value="char-cnn">Character-Level 1D-CNN (Acc: 92.98%)</option>
-                    <option value="cnn-bilstm">Hybrid CNN-BiLSTM (Acc: 92.35%)</option>
-                    <option value="bilstm">Bidirectional LSTM (Acc: 89.91%)</option>
-                    <option value="afro-xlmr-transformer">Afro-XLMR / Tigrinya-BERT Transformer (Acc: 95.80%)</option>
-                  </optgroup>
-                </select>
-              </div>
-            </div>
-
-            {/* Category Toggles */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
-                <button
-                  onClick={() => {
-                    setModelCategory('classic');
-                    if (!['naive-bayes', 'svm', 'ann'].includes(modelChoice)) {
-                      setModelChoice('svm');
-                    }
-                  }}
-                  className={`px-3 py-1 rounded-[3px] border cursor-pointer font-semibold ${
-                    modelCategory === 'classic'
-                      ? 'bg-cyan-400 text-white border-cyan-400'
-                      : isDark ? 'bg-slate-950 border-slate-800 text-[#9DB0AE]' : 'bg-white border-[#C5CEC8] text-[#516064]'
-                  }`}
-                >
-                  Classical Rule-Based
-                </button>
-                <button
-                  onClick={() => {
-                    setModelCategory('deep');
-                    if (['naive-bayes', 'svm', 'ann'].includes(modelChoice)) {
-                      setModelChoice('afro-xlmr-transformer');
-                    }
-                  }}
-                  className={`px-3 py-1 rounded-[3px] border cursor-pointer font-semibold ${
-                    modelCategory === 'deep'
-                      ? 'bg-cyan-400 text-white border-cyan-400'
-                      : isDark ? 'bg-slate-950 border-slate-800 text-[#9DB0AE]' : 'bg-white border-[#C5CEC8] text-[#516064]'
-                  }`}
-                >
-                  Deep Learning &amp; Transformers
-                </button>
-              </div>
-              <span className="text-[11px] font-mono text-cyan-400 break-words min-w-0">
-                Active: {modelChoice === 'afro-xlmr-transformer' ? 'Afro-XLMR Transformer' : modelChoice.toUpperCase()}
+                {tdi.status === 'ready' ? 'Loaded · runs in your browser' : tdi.status === 'error' ? 'Model unavailable' : 'Loading model…'}
               </span>
             </div>
-
-            {/* Specific Models within Category Cards */}
-            <div className={`grid gap-2 min-w-0 ${modelCategory === 'classic' ? 'grid-cols-1 min-[420px]:grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
-              {modelCategory === 'classic' ? (
-                <>
+            <p className={`text-xs leading-relaxed ${isDark ? 'text-[#C9D6D3]' : 'text-[#2A3B3F]'}`}>
+              Character n-gram TF-IDF (1–4) + logistic regression, trained on the project corpus. Your text is never uploaded.
+            </p>
+            {tdi.status === 'error' && (
+              <div className="text-xs text-red-500 flex flex-wrap items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                <span>{tdi.error}</span>
+                <button type="button" onClick={tdi.retry} className="underline cursor-pointer">Retry</button>
+              </div>
+            )}
+            {tdi.card && (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                   {[
-                    { id: 'naive-bayes', name: 'Naive Bayes', acc: '83.0%' },
-                    { id: 'svm', name: 'Linear SVM', acc: '87.0%' },
-                    { id: 'ann', name: 'Neural Net (ANN)', acc: '89.0%' }
-                  ].map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => setModelChoice(m.id)}
-                      className={`p-2.5 rounded-[4px] text-left border transition cursor-pointer ${
-                        modelChoice === m.id
-                          ? isDark ? 'bg-slate-950 border-cyan-400 text-[#E6ECE8]' : 'bg-white border-cyan-400 text-[#17262A] shadow-2xs'
-                          : isDark ? 'bg-slate-950/50 border-slate-800 text-[#9DB0AE]' : 'bg-white/70 border-[#C5CEC8] text-[#516064]'
-                      }`}
-                    >
-                      <div className="font-semibold text-xs">{m.name}</div>
-                      <div className="font-mono text-[10px] text-cyan-400 mt-0.5">Acc: {m.acc}</div>
-                    </button>
+                    ['Accuracy', (tdi.card.evaluation_train_only_model_on_heldout_test.accuracy * 100).toFixed(1) + '%'],
+                    ['Macro-F1', tdi.card.evaluation_train_only_model_on_heldout_test.macro_f1.toFixed(3)],
+                    ['95% CI', tdi.card.evaluation_train_only_model_on_heldout_test.macro_f1_95ci],
+                    ['Calibration (ECE)', tdi.card.evaluation_train_only_model_on_heldout_test.ece.toFixed(3)]
+                  ].map(([k, v]) => (
+                    <div key={k} className={`p-2 rounded-[4px] border ${isDark ? 'border-slate-700 bg-slate-950/40' : 'border-[#C5CEC8] bg-white'}`}>
+                      <div className={`text-[10px] font-mono uppercase ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}`}>{k}</div>
+                      <div className={`text-sm font-mono ${isDark ? 'text-[#E6ECE8]' : 'text-[#17262A]'}`}>{v}</div>
+                    </div>
                   ))}
-                </>
-              ) : (
-                <>
-                  {[
-                    { id: 'afro-xlmr-transformer', name: 'Afro-XLMR Transformer', acc: '95.80%' },
-                    { id: 'char-cnn', name: 'Character CNN', acc: '92.98%' },
-                    { id: 'cnn-bilstm', name: 'CNN-BiLSTM', acc: '92.35%' },
-                    { id: 'bilstm', name: 'Bidirectional LSTM', acc: '89.91%' }
-                  ].map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => setModelChoice(m.id)}
-                      className={`p-2.5 rounded-[4px] text-left border transition cursor-pointer ${
-                        modelChoice === m.id
-                          ? isDark ? 'bg-slate-950 border-cyan-400 text-[#E6ECE8]' : 'bg-white border-cyan-400 text-[#17262A] shadow-2xs'
-                          : isDark ? 'bg-slate-950/50 border-slate-800 text-[#9DB0AE]' : 'bg-white/70 border-[#C5CEC8] text-[#516064]'
-                      }`}
-                    >
-                      <div className="font-semibold text-xs truncate">{m.name}</div>
-                      <div className="font-mono text-[10px] text-cyan-400 mt-0.5">Acc: {m.acc}</div>
-                    </button>
-                  ))}
-                </>
-              )}
-            </div>
+                </div>
+                <p className={`text-[11px] leading-relaxed ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}`}>
+                  Measured on {tdi.card.evaluation_train_only_model_on_heldout_test.n_test_sentences.toLocaleString()} held-out sentences
+                  ({tdi.card.evaluation_train_only_model_on_heldout_test.n_test_triples} parallel triples never seen in training); {tdi.card.data.sentences_kept.toLocaleString()} sentences
+                  kept after cleaning. Trained {tdi.card.created.slice(0, 10)}. The neural models in the paper (e.g. the 92.98% character CNN, evaluated on the earlier dataset) are
+                  research results and are not served in this demo.
+                </p>
+                <details className="text-[11px]">
+                  <summary className={`cursor-pointer ${isDark ? 'text-cyan-400' : 'text-cyan-700'}`}>Known limitations</summary>
+                  <ul className={`list-disc pl-5 mt-1 space-y-1 ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}`}>
+                    {tdi.card.limitations.map((l) => <li key={l}>{l}</li>)}
+                  </ul>
+                </details>
+              </>
+            )}
           </div>
 
           {/* Language Validation Banner */}
@@ -903,7 +704,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleRunSingleInference}
-                  disabled={isRunning || !inputText.trim()}
+                  disabled={isRunning || !inputText.trim() || tdi.status === 'error'}
                   className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-[4px] font-mono text-xs font-semibold uppercase tracking-wider text-white transition-colors cursor-pointer disabled:opacity-50 ${
                     isDark ? 'bg-cyan-400 hover:bg-[#8F1E18]' : 'bg-cyan-400 hover:bg-[#8F1E18]'
                   }`}
@@ -911,7 +712,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                   {isRunning ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Inferring (Char-CNN)...</span>
+                      <span>Classifying...</span>
                     </>
                   ) : (
                     <>
@@ -965,10 +766,10 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
             <div className="flex items-center justify-between pb-2 border-b border-inherit">
               <div className="flex items-center gap-2">
                 <Info className="w-4 h-4 text-cyan-400" />
-                <h4 className="font-serif text-sm font-semibold">Morpho-Syntactic Rule Engine &amp; Thesis Notes</h4>
+                <h4 className="font-serif text-sm font-semibold">Linguistic Markers &amp; Thesis Notes</h4>
               </div>
               <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-cyan-400/10 text-cyan-400 font-bold">
-                Primary Classifier Layer
+                Reference
               </span>
             </div>
             <p className={`text-xs leading-relaxed ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}`}>
@@ -1009,7 +810,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                     Inference Output
                   </span>
                   <span className="font-mono text-xs text-cyan-400 font-semibold">
-                    Char-CNN Receptive Field
+                    Model Output
                   </span>
                 </div>
                 <button
@@ -1185,7 +986,16 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                           onClick={() => setShowFeedbackForm(prev => !prev)}
                           className="px-3 py-1.5 rounded-[4px] bg-cyan-400 text-slate-950 text-[11px] font-semibold hover:bg-cyan-300 transition cursor-pointer text-left whitespace-normal"
                         >
-                          {showFeedbackForm ? 'Close form' : <>Report Misclassification<span className="hidden sm:inline"> (False Positive/Negative)</span></>}
+                          {showFeedbackForm ? 'Close form' : 'Report Misclassification'}
+                        </button>
+                        <button
+                          onClick={() => setShowComments(prev => !prev)}
+                          aria-expanded={showComments}
+                          className={`px-3 py-1.5 rounded-[4px] border text-[11px] font-semibold transition cursor-pointer text-left whitespace-normal ${
+                            isDark ? 'border-slate-600 text-slate-100 hover:bg-slate-800' : 'border-slate-400 text-slate-900 hover:bg-slate-100'
+                          }`}
+                        >
+                          {showComments ? 'Hide comments' : 'Comments & replies'}
                         </button>
                       </div>
                     </div>
@@ -1207,7 +1017,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                       }`}>
                         <div className="flex flex-wrap items-center justify-between gap-1">
                           <span className="font-mono text-xs font-bold text-cyan-400">
-                            Report False Positive / False Negative Correction
+                            Report a misclassification
                           </span>
                           
                         </div>
@@ -1281,6 +1091,10 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                       </div>
                     )}
 
+                    {showComments && (
+                      <div className="pt-2"><CommentsPanel isDark={isDark} /></div>
+                    )}
+
                     {!showFeedbackForm && !expertFeedback.given && (
                       <div className="flex flex-wrap items-center gap-1.5 pt-1">
                         <span className={`text-[11px] font-mono ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}`}>Quick Override to:</span>
@@ -1326,9 +1140,16 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
         </div>
       )}
 
-      {/* BATCH FILE / CORPUS EVALUATION MODE */}
+      {/* SAMPLE CORPUS: the same dataset as the Sample Corpus portal, plus own-file scoring */}
       {activeTabMode === 'batch' && (
         <div className="space-y-6">
+          <ResearchDataPortal
+            onSendToDialectLab={(text) => {
+              setInputText(text);
+              withModel(() => setSingleResult(runInference(text, `corpus-${Date.now()}`)));
+              setActiveTabMode('single');
+            }}
+          />
           
           {/* File Upload Box */}
           <div className={`p-6 rounded-[6px] border space-y-4 ${
@@ -1337,7 +1158,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h3 className="font-serif text-lg font-semibold">
-                  Batch Dialect Evaluation & File Ingestion
+                  Classify your own file
                 </h3>
                 <p className={`text-xs mt-1 ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}`}>
                   Upload a text file, CSV or corpus dump with multiple sentences to classify them en masse.
@@ -1456,19 +1277,17 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                 isDark ? 'border-slate-800 bg-slate-900/80' : 'border-[#C5CEC8] bg-white'
               }`}>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-mono">
-                    <thead className={`border-b ${
-                      isDark ? 'border-slate-800 bg-slate-950 text-[#9DB0AE]' : 'border-[#C5CEC8] bg-[#F2F5F0] text-[#516064]'
-                    }`}>
+                  <table className="data-table text-xs">
+                    <thead>
                       <tr>
-                        <th className="py-2.5 px-3 font-semibold">#</th>
-                        <th className="py-2.5 px-3 font-semibold">Tigrinya Text Sample</th>
-                        <th className="py-2.5 px-3 font-semibold">Predicted</th>
-                        <th className="py-2.5 px-3 font-semibold text-right">Confidence</th>
-                        <th className="py-2.5 px-3 font-semibold">Markers</th>
+                        <th>#</th>
+                        <th>Tigrinya Text Sample</th>
+                        <th>Predicted</th>
+                        <th className="text-right">Confidence</th>
+                        <th>Markers</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-inherit">
+                    <tbody>
                       {filteredBatch.map((item, idx) => (
                         <tr 
                           key={item.id} 
@@ -1479,10 +1298,10 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                           <td className={`py-2.5 px-3 font-mono ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}`}>
                             {idx + 1}
                           </td>
-                          <td className="py-2.5 px-3 font-serif text-sm max-w-md truncate">
+                          <td className="font-serif text-sm max-w-md truncate">
                             {item.text}
                           </td>
-                          <td className="py-2.5 px-3 whitespace-nowrap">
+                          <td className="whitespace-nowrap">
                             {item.confidence === 0 ? (
                               <span className="px-2 py-0.5 rounded-[3px] font-semibold text-[11px] text-red-500 bg-red-500/10">
                                 {item.rejectionReason === 'amharic' ? 'Refused: Amharic, input Tigrinya' : 'Refused: not Tigrinya'}
@@ -1499,7 +1318,7 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
                             </span>
                             )}
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono font-semibold whitespace-nowrap">
+                          <td className="text-right font-mono font-semibold whitespace-nowrap">
                             {item.confidence === 0 ? '—' : `${(item.confidence * 100).toFixed(1)}%`}
                           </td>
                           <td className={`py-2.5 px-3 font-serif text-xs ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'} whitespace-nowrap`}>
@@ -1515,19 +1334,6 @@ export const TigrinyaDialectLab: React.FC<TigrinyaDialectLabProps> = ({ initialT
             </div>
           )}
 
-          {batchResults.length === 0 && (
-            <div className={`p-8 rounded-[6px] border text-center space-y-3 ${
-              isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-[#F2F5F0] border-[#C5CEC8]'
-            }`}>
-              <Brain className="w-8 h-8 mx-auto text-cyan-400" />
-              <div className="font-serif text-lg font-semibold">
-                No Batch Corpus Loaded Yet
-              </div>
-              <p className={`text-xs max-w-md mx-auto ${isDark ? 'text-[#9DB0AE]' : 'text-[#516064]'}`}>
-                Upload your annotated dataset file above or switch to Direct Text Inference to test individual sentences right away.
-              </p>
-            </div>
-          )}
 
         </div>
       )}

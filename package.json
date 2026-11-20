@@ -8,7 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-tdi \"node --test tests/\"",
+    "test:model": "node --test tests/tdi_parity.test.mjs",
+    "model:install": "node scripts/install-model.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -27,6 +30,8 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "firebase-tools": "^14.0.0",
+    "@firebase/rules-unit-testing": "^6.0.0"
   }
 }

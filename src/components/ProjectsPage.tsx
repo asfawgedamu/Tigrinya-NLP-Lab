@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { SocialBadges } from './SocialBadges';
 import { ResearchDataPortal } from './dynamic/ResearchDataPortal';
 import { TigrinyaDialectLab } from './TigrinyaDialectLab';
 import { TigrinyaNlpExplorer } from './dynamic/TigrinyaNlpExplorer';
@@ -18,11 +17,6 @@ export const ProjectsPage: React.FC = () => {
   return (
     <div className={`max-w-7xl mx-auto px-3 sm:px-6 py-8 space-y-8 min-w-0 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
       
-      {/* Top Badges */}
-      <div className="pb-2">
-        <SocialBadges />
-      </div>
-
       {/* Header Card */}
       <div className={`p-4 sm:p-8 rounded-2xl border backdrop-blur-xl shadow-xl space-y-2 ${
         isDark ? 'border-slate-800 bg-slate-900/80 text-white' : 'border-slate-300 bg-white text-slate-900'
@@ -51,7 +45,7 @@ export const ProjectsPage: React.FC = () => {
               Tigrinya Dialect Lab (TDI Benchmark)
             </h2>
             <p className={`text-xs sm:text-sm mt-1 max-w-2xl ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Classifies Tigrinya text into one of three varieties: Variety Z (Standard Tigrinya), Variety L (Enderta/Mekelle) or Variety D (Rayya). Varieties are defined by linguistic markers, mainly the ዝ- / ል- / ድ- prefixes, not by where speakers live. Paste a Ge&apos;ez sentence, or upload a dataset file for batch scoring.
+              Classifies Tigrinya text into one of three varieties: Variety Z (Standard Tigrinya), Variety L (Enderta/Mekelle) or Variety D (Rayya). Varieties are defined by linguistic markers, mainly the ዝ- / ል- / ድ- prefixes, not by where speakers live. Paste a Ge&apos;ez sentence, or open the Sample Corpus tab to browse verified examples and score your own file.
             </p>
           </div>
         </div>
@@ -68,7 +62,7 @@ export const ProjectsPage: React.FC = () => {
           <div>
             <h3 className="text-xl font-bold font-serif">Additional Research Portals</h3>
             <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-              Explore the Ge&apos;ez Fidel matrix, model benchmarks and the 52-sentence research corpus. Misclassification reports are moderated from the lab&apos;s Admin Moderation tab.
+              Explore the Ge&apos;ez Fidel matrix, model benchmarks and the Sample Corpus.
             </p>
           </div>
 
@@ -82,7 +76,7 @@ export const ProjectsPage: React.FC = () => {
               <h3 className="font-serif text-xl font-bold">Benchmarks &amp; Ge&apos;ez Fidel Explorer</h3>
               <button
                 onClick={() => setActiveSecondaryModule('none')}
-                className="px-3 py-1 rounded-lg text-xs font-mono border border-slate-700 bg-slate-800 text-slate-300 cursor-pointer"
+                className={`px-3 py-1 rounded-lg text-xs font-mono border cursor-pointer ${isDark ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-slate-400 bg-white text-slate-900 hover:bg-slate-100'}`}
               >
                 Close Portal ✕
               </button>
@@ -96,10 +90,10 @@ export const ProjectsPage: React.FC = () => {
             isDark ? 'border-slate-800 bg-slate-900/80 text-white' : 'border-slate-300 bg-white text-slate-900'
           }`}>
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-inherit">
-              <h3 className="font-serif text-xl font-bold">Research Data Portal (52 Verified Sentences)</h3>
+              <h3 className="font-serif text-xl font-bold">Sample Corpus (52 Verified Texts)</h3>
               <button
                 onClick={() => setActiveSecondaryModule('none')}
-                className="px-3 py-1 rounded-lg text-xs font-mono border border-slate-700 bg-slate-800 text-slate-300 cursor-pointer"
+                className={`px-3 py-1 rounded-lg text-xs font-mono border cursor-pointer ${isDark ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-slate-400 bg-white text-slate-900 hover:bg-slate-100'}`}
               >
                 Close Portal ✕
               </button>
@@ -125,8 +119,8 @@ export const ProjectsPage: React.FC = () => {
                 isDark ? 'border-slate-800 bg-slate-900/60 hover:border-cyan-500/50' : 'border-slate-300 bg-white hover:border-cyan-600 shadow-md'
               }`}
             >
-              <h4 className="font-serif font-bold text-base group-hover:text-cyan-400 transition-colors">Research Data Portal</h4>
-              <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Browse 52 verified research sentences and export parallel test vectors.</p>
+              <h4 className="font-serif font-bold text-base group-hover:text-cyan-400 transition-colors">Sample Corpus</h4>
+              <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Browse the 52 verified parallel texts in all three varieties, send any text to the Lab, or export the data.</p>
             </div>
           </div>
         )}

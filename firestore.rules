@@ -1,65 +1,125 @@
 rules_version = '2';
 
-// Replace the address below with the Google account you use to sign in as author/admin.
-// Only that verified account can moderate reports, reply as "Author", and delete content.
+// SECURITY MODEL
+//  * Visitors sign in anonymously (automatic). Their identity is used for rate limits, one vote per
+//    browser and deleting their own posts.
+//  * Only the admin (your verified Google account) can read reports, post as "Author", delete others'
+//    content, block browsers, pause posting and change settings.
+//  * Everything not listed here is denied.
+//
+// Replace the e-mail below with the Google account you use to sign in as author/admin.
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() { return request.auth != null; }
 
     function isAdmin() {
       return request.auth != null
         && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
         && request.auth.token.email == 'REPLACE_WITH_YOUR_GOOGLE_EMAIL@gmail.com';
     }
 
     function isText(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
 
-    // ---- Comments: anyone reads and posts; anyone can add exactly one upvote; admin deletes ----
+    // Visitors may not pose as the owner or as staff.
+    function nameAllowed(name) {
+      return !name.lower().matches('.*asfaw.*gedamu.*')
+        && !(name.lower() in ['author', 'admin', 'owner', 'moderator']);
+    }
+
+    // The emergency switch: admin sets settings/public { commentsOpen: false } to pause all posting.
+    function writesOpen() {
+      let p = /databases/$(database)/documents/settings/public;
+      return !exists(p) || get(p).data.get('commentsOpen', true) == true;
+    }
+
+    function notBlocked() {
+      return !exists(/databases/$(database)/documents/blocked/$(request.auth.uid));
+    }
+
+    // One post per 15 seconds per browser: every post must arrive in the same batch as a
+    // limits/{uid} write stamped with the server time (that document enforces the 15 s gap).
+    function throttled() {
+      let p = /databases/$(database)/documents/limits/$(request.auth.uid);
+      return existsAfter(p) && getAfter(p).data.lastWriteAt == request.time;
+    }
+
+    function visitorMayPost() {
+      return signedIn() && writesOpen() && notBlocked() && throttled();
+    }
+
+    // ---------- comments ----------
     function validComment(d) {
-      return d.keys().hasAll(['author', 'category', 'text', 'upvotes', 'createdAt'])
-        && d.keys().hasOnly(['author', 'affiliation', 'category', 'text', 'upvotes', 'createdAt'])
-        && isText(d.author, 100)
+      return d.keys().hasAll(['author', 'category', 'text', 'upvotes', 'createdAt', 'authorUid'])
+        && d.keys().hasOnly(['author', 'affiliation', 'category', 'text', 'upvotes', 'createdAt', 'authorUid'])
+        && isText(d.author, 100) && nameAllowed(d.author)
         && (!('affiliation' in d) || (d.affiliation is string && d.affiliation.size() <= 150))
         && d.category in ['General Feedback', 'Dialect Inquiry', 'Research Discussion', 'Feature Request']
         && isText(d.text, 2000)
-        && d.upvotes is int
+        && d.upvotes == 0
+        && d.authorUid == request.auth.uid
         && d.createdAt == request.time;
     }
 
     match /comments/{commentId} {
       allow read: if true;
-      // Visitors must start at 0 upvotes; the admin may publish featured comments with a starting count.
-      allow create: if (validComment(request.resource.data) && request.resource.data.upvotes == 0) || isAdmin();
-      allow update: if (
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes'])
-          && request.resource.data.upvotes == resource.data.upvotes + 1
-        ) || isAdmin();
-      allow delete: if isAdmin();
+      allow create: if isAdmin() || (visitorMayPost() && validComment(request.resource.data));
+
+      // A vote adds exactly 1, and only together with this browser's one-time vote marker.
+      allow update: if isAdmin() || (
+        signedIn() && writesOpen() && notBlocked()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes'])
+        && request.resource.data.upvotes == resource.data.upvotes + 1
+        && !exists(/databases/$(database)/documents/comments/$(commentId)/votes/$(request.auth.uid))
+        && existsAfter(/databases/$(database)/documents/comments/$(commentId)/votes/$(request.auth.uid))
+      );
+
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.get('authorUid', '') == request.auth.uid);
+
+      match /votes/{voterUid} {
+        allow create: if signedIn() && request.auth.uid == voterUid
+          && request.resource.data.keys().hasOnly(['createdAt'])
+          && request.resource.data.createdAt == request.time;
+        allow read, update, delete: if false;
+      }
     }
 
-    // ---- Replies: anyone can reply; only the admin can post as the Author ----
+    // ---------- replies (conversation threads) ----------
     function validReply(d) {
-      return d.keys().hasOnly(['commentId', 'author', 'text', 'isOwner', 'createdAt'])
-        && d.keys().hasAll(['commentId', 'author', 'text', 'isOwner', 'createdAt'])
+      return d.keys().hasAll(['commentId', 'author', 'text', 'isOwner', 'createdAt', 'authorUid'])
+        && d.keys().hasOnly(['commentId', 'parentReplyId', 'replyToName', 'author', 'text', 'isOwner', 'createdAt', 'authorUid'])
         && isText(d.commentId, 128)
-        && isText(d.author, 100)
+        && (!('parentReplyId' in d) || isText(d.parentReplyId, 128))
+        && (!('replyToName' in d) || isText(d.replyToName, 100))
+        && isText(d.author, 100) && nameAllowed(d.author)
         && isText(d.text, 2000)
-        && d.isOwner is bool
-        && (d.isOwner == false || isAdmin())
+        && d.isOwner == false
+        && d.authorUid == request.auth.uid
         && d.createdAt == request.time
         && exists(/databases/$(database)/documents/comments/$(d.commentId));
     }
 
     match /replies/{replyId} {
       allow read: if true;
-      allow create: if validReply(request.resource.data);
+      allow create: if (isAdmin()
+          && request.resource.data.keys().hasAll(['commentId', 'author', 'text', 'isOwner', 'createdAt', 'authorUid'])
+          && request.resource.data.keys().hasOnly(['commentId', 'parentReplyId', 'replyToName', 'author', 'text', 'isOwner', 'createdAt', 'authorUid'])
+          && isText(request.resource.data.text, 2000)
+          && request.resource.data.createdAt == request.time)
+        || (visitorMayPost() && validReply(request.resource.data));
       allow update: if false;
-      allow delete: if isAdmin();
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.get('authorUid', '') == request.auth.uid);
     }
 
-    // ---- Misclassification reports: anyone can submit; only the admin can read and review ----
+    // ---------- misclassification reports ----------
     function validReport(d) {
-      return d.keys().hasAll(['text', 'predicted', 'correct', 'status', 'timestamp', 'createdAt'])
-        && d.keys().hasOnly(['text', 'predicted', 'errorType', 'correct', 'notes', 'timestamp', 'createdAt', 'status'])
+      return d.keys().hasAll(['text', 'predicted', 'correct', 'status', 'timestamp', 'createdAt', 'authorUid'])
+        && d.keys().hasOnly(['text', 'predicted', 'errorType', 'correct', 'notes', 'timestamp', 'createdAt', 'status', 'authorUid'])
         && isText(d.text, 2000)
         && d.predicted is string && d.predicted.size() <= 100
         && d.correct is string && d.correct.size() <= 100
@@ -67,18 +127,42 @@ service cloud.firestore {
         && (!('notes' in d) || (d.notes is string && d.notes.size() <= 1000))
         && d.timestamp is string && d.timestamp.size() <= 100
         && d.status == 'Pending Validation'
+        && d.authorUid == request.auth.uid
         && d.createdAt == request.time;
     }
 
     match /feedbackSubmissions/{reportId} {
       allow read: if isAdmin();
-      allow create: if validReport(request.resource.data);
+      allow create: if isAdmin() || (visitorMayPost() && validReport(request.resource.data));
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'moderatorComment'])
         && request.resource.data.status in ['Approved', 'Rejected']
         && (!('moderatorComment' in request.resource.data)
             || (request.resource.data.moderatorComment is string && request.resource.data.moderatorComment.size() <= 1000));
       allow delete: if isAdmin();
+    }
+
+    // ---------- rate-limit marker (one per browser identity) ----------
+    match /limits/{uid} {
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastWriteAt'])
+        && request.resource.data.lastWriteAt == request.time;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['lastWriteAt'])
+        && request.resource.data.lastWriteAt == request.time
+        && request.time > resource.data.lastWriteAt + duration.value(15, 's');
+      allow read, delete: if false;
+    }
+
+    // ---------- admin-controlled documents ----------
+    match /blocked/{uid} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }

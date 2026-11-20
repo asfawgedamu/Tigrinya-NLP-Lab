@@ -1,0 +1,47 @@
+{
+  "source_file": "tigrinya-dialects-2025.xlsx",
+  "source_sha256": "efb5589014fddc707a31cac228ecb5ff1145e7c37a0d6762d0a9026cde2f8c7c",
+  "clean_csv_sha256": "c350180570d4c4c3388eac152ebe54336a7d3212d539e01e4284558313c16117",
+  "seed": 42,
+  "triples_raw": 3467,
+  "sentences_raw": 10401,
+  "audit": {
+    "triples": 3467,
+    "sentences": 10401,
+    "empty_sentences": 6,
+    "triples_identical_in_all_3_varieties": 141,
+    "triples_with_two_identical_varieties": 240,
+    "sentences_with_latin_letters": 32,
+    "sentences_with_hashtag_mention_or_url": 80,
+    "sentences_with_leading_trailing_or_double_whitespace": 956,
+    "median_ethiopic_letter_share": 1.0,
+    "triples_per_source_variety": {
+      "D": 1267,
+      "L": 1125,
+      "Z": 1075
+    }
+  },
+  "removed_empty": 6,
+  "removed_ambiguous_same_text_multiple_labels": 937,
+  "removed_same_label_duplicates": 15,
+  "sentences_kept": 9443,
+  "per_split_label_counts": {
+    "test": {
+      "D": 644,
+      "Z": 635,
+      "L": 620
+    },
+    "train": {
+      "Z": 2545,
+      "D": 2540,
+      "L": 2459
+    }
+  },
+  "native_sentences": 3085,
+  "versions": {
+    "python": "3.12.4",
+    "pandas": "2.2.2",
+    "numpy": "1.26.4",
+    "scikit-learn": "1.4.2"
+  }
+}

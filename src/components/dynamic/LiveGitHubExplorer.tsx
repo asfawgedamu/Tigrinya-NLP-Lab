@@ -70,6 +70,7 @@ export const LiveGitHubExplorer: React.FC = () => {
   const { isDark } = useTheme();
   const [repos, setRepos] = useState<GitHubRepo[]>(FALLBACK_REPOS);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [offline, setOffline] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('All');
   const [includeForks, setIncludeForks] = useState<boolean>(false);
@@ -83,10 +84,13 @@ export const LiveGitHubExplorer: React.FC = () => {
         const data: GitHubRepo[] = await res.json();
         if (Array.isArray(data) && data.length > 0) {
           setRepos(data);
+          setOffline(false);
         }
+      } else {
+        setOffline(true);
       }
     } catch {
-      // Fallback preserved
+      setOffline(true);
     } finally {
       setIsLoading(false);
     }
@@ -129,12 +133,12 @@ export const LiveGitHubExplorer: React.FC = () => {
               isDark ? 'text-cyan-400' : 'text-[#0A66C2]'
             }`}>
               <GitBranch className="w-4 h-4" />
-              <span>GitHub API Real-Time Sync</span>
+              <span>GitHub</span>
               <span className="text-slate-400">·</span>
-              <span>@asfawgedamu ({repos.length} repositories)</span>
+              <span>@asfawgedamu ({repos.filter((r) => !r.fork).length} repositories{offline ? ', featured only' : ''})</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-              Live GitHub Repositories Hub
+              GitHub Repositories
             </h1>
             <p className={`mt-2 text-sm sm:text-base max-w-3xl leading-relaxed ${
               isDark ? 'text-slate-300' : 'text-slate-600'
